@@ -1,0 +1,366 @@
+// See screen.h. The same driver as the Warblet MicroPython desk display's
+// screen.py, in C++: the same pins, the same questions to the screen chip
+// and the same settings for each, the same letters, drawn the same way.
+#include "screen.h"
+
+#include <SPI.h>
+
+namespace screen {
+
+bool GUESSED = false;
+
+namespace {
+
+// What each chip needs. "turn" sets the screen sideways (landscape) with the
+// blue and red order this board uses; "mode" is the SPI clock shape the chip
+// expects; "c0" sets register C0h to 0x0C. The ILI9341's values are the
+// MicroPython desk display's; the ST7789's come from TFT_eSPI and the CYD
+// board files, not yet from a board: its rotation table differs from the ILI9341's by the
+// mirror bit (0x40), and its C0h register, left at its reset value 0x2C,
+// would swap blue and red.
+struct Chip {
+  const char* name;
+  uint8_t turn;
+  bool invert;
+  uint8_t mode;
+  bool c0;
+};
+const Chip ILI9341 = {"ILI9341", 0xE8, false, 0, false};
+const Chip ST7789 = {"ST7789", 0xA8, false, 3, true};
+// If the screen does not answer: the ST7789 board's data line from the
+// screen is not connected, so it never answers; ILI9341 boards do.
+const Chip& FALLBACK = ST7789;
+
+const int PRESS = 400;  // how hard a touch must be (the touch chip's pressure reading)
+
+const int SCREEN_DC = 2, SCREEN_CS = 15, SCREEN_LIGHT = 21;
+const int TOUCH_PEN = 36, TOUCH_CS = 33, TOUCH_CLOCK = 25, TOUCH_TO_CHIP = 32, TOUCH_FROM_CHIP = 39;
+
+SPIClass bus(HSPI);
+SPISettings shape(4000000, MSBFIRST, SPI_MODE0);
+char said[200];
+uint8_t row[WIDTH * 2];  // one row of pixels, two bytes each
+
+// MicroPython's own 8x8 letters (extmod/font_petme128_8x8.h, MicroPython
+// v1.28.0): characters 32 to 127, each 8 columns of 8 pixels, the lowest
+// bit at the top.
+//   The MIT License (MIT). Copyright (c) 2013, 2014 Damien P. George.
+//   Permission is hereby granted, free of charge, to any person obtaining a
+//   copy of this software and associated documentation files (the
+//   "Software"), to deal in the Software without restriction, including
+//   without limitation the rights to use, copy, modify, merge, publish,
+//   distribute, sublicense, and/or sell copies of the Software, and to
+//   permit persons to whom the Software is furnished to do so, subject to
+//   the following conditions: The above copyright notice and this
+//   permission notice shall be included in all copies or substantial
+//   portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT
+//   WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+//   THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+//   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+//   LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+//   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+//   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+const uint8_t LETTERS[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 32
+    0x00, 0x00, 0x00, 0x4f, 0x4f, 0x00, 0x00, 0x00, // 33=!
+    0x00, 0x07, 0x07, 0x00, 0x00, 0x07, 0x07, 0x00, // 34="
+    0x14, 0x7f, 0x7f, 0x14, 0x14, 0x7f, 0x7f, 0x14, // 35=#
+    0x00, 0x24, 0x2e, 0x6b, 0x6b, 0x3a, 0x12, 0x00, // 36=$
+    0x00, 0x63, 0x33, 0x18, 0x0c, 0x66, 0x63, 0x00, // 37=%
+    0x00, 0x32, 0x7f, 0x4d, 0x4d, 0x77, 0x72, 0x50, // 38=&
+    0x00, 0x00, 0x00, 0x04, 0x06, 0x03, 0x01, 0x00, // 39='
+    0x00, 0x00, 0x1c, 0x3e, 0x63, 0x41, 0x00, 0x00, // 40=(
+    0x00, 0x00, 0x41, 0x63, 0x3e, 0x1c, 0x00, 0x00, // 41=)
+    0x08, 0x2a, 0x3e, 0x1c, 0x1c, 0x3e, 0x2a, 0x08, // 42=*
+    0x00, 0x08, 0x08, 0x3e, 0x3e, 0x08, 0x08, 0x00, // 43=+
+    0x00, 0x00, 0x80, 0xe0, 0x60, 0x00, 0x00, 0x00, // 44=,
+    0x00, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x00, // 45=-
+    0x00, 0x00, 0x00, 0x60, 0x60, 0x00, 0x00, 0x00, // 46=.
+    0x00, 0x40, 0x60, 0x30, 0x18, 0x0c, 0x06, 0x02, // 47=/
+    0x00, 0x3e, 0x7f, 0x49, 0x45, 0x7f, 0x3e, 0x00, // 48=0
+    0x00, 0x40, 0x44, 0x7f, 0x7f, 0x40, 0x40, 0x00, // 49=1
+    0x00, 0x62, 0x73, 0x51, 0x49, 0x4f, 0x46, 0x00, // 50=2
+    0x00, 0x22, 0x63, 0x49, 0x49, 0x7f, 0x36, 0x00, // 51=3
+    0x00, 0x18, 0x18, 0x14, 0x16, 0x7f, 0x7f, 0x10, // 52=4
+    0x00, 0x27, 0x67, 0x45, 0x45, 0x7d, 0x39, 0x00, // 53=5
+    0x00, 0x3e, 0x7f, 0x49, 0x49, 0x7b, 0x32, 0x00, // 54=6
+    0x00, 0x03, 0x03, 0x79, 0x7d, 0x07, 0x03, 0x00, // 55=7
+    0x00, 0x36, 0x7f, 0x49, 0x49, 0x7f, 0x36, 0x00, // 56=8
+    0x00, 0x26, 0x6f, 0x49, 0x49, 0x7f, 0x3e, 0x00, // 57=9
+    0x00, 0x00, 0x00, 0x24, 0x24, 0x00, 0x00, 0x00, // 58=:
+    0x00, 0x00, 0x80, 0xe4, 0x64, 0x00, 0x00, 0x00, // 59=;
+    0x00, 0x08, 0x1c, 0x36, 0x63, 0x41, 0x41, 0x00, // 60=<
+    0x00, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x00, // 61==
+    0x00, 0x41, 0x41, 0x63, 0x36, 0x1c, 0x08, 0x00, // 62=>
+    0x00, 0x02, 0x03, 0x51, 0x59, 0x0f, 0x06, 0x00, // 63=?
+    0x00, 0x3e, 0x7f, 0x41, 0x4d, 0x4f, 0x2e, 0x00, // 64=@
+    0x00, 0x7c, 0x7e, 0x0b, 0x0b, 0x7e, 0x7c, 0x00, // 65=A
+    0x00, 0x7f, 0x7f, 0x49, 0x49, 0x7f, 0x36, 0x00, // 66=B
+    0x00, 0x3e, 0x7f, 0x41, 0x41, 0x63, 0x22, 0x00, // 67=C
+    0x00, 0x7f, 0x7f, 0x41, 0x63, 0x3e, 0x1c, 0x00, // 68=D
+    0x00, 0x7f, 0x7f, 0x49, 0x49, 0x41, 0x41, 0x00, // 69=E
+    0x00, 0x7f, 0x7f, 0x09, 0x09, 0x01, 0x01, 0x00, // 70=F
+    0x00, 0x3e, 0x7f, 0x41, 0x49, 0x7b, 0x3a, 0x00, // 71=G
+    0x00, 0x7f, 0x7f, 0x08, 0x08, 0x7f, 0x7f, 0x00, // 72=H
+    0x00, 0x00, 0x41, 0x7f, 0x7f, 0x41, 0x00, 0x00, // 73=I
+    0x00, 0x20, 0x60, 0x41, 0x7f, 0x3f, 0x01, 0x00, // 74=J
+    0x00, 0x7f, 0x7f, 0x1c, 0x36, 0x63, 0x41, 0x00, // 75=K
+    0x00, 0x7f, 0x7f, 0x40, 0x40, 0x40, 0x40, 0x00, // 76=L
+    0x00, 0x7f, 0x7f, 0x06, 0x0c, 0x06, 0x7f, 0x7f, // 77=M
+    0x00, 0x7f, 0x7f, 0x0e, 0x1c, 0x7f, 0x7f, 0x00, // 78=N
+    0x00, 0x3e, 0x7f, 0x41, 0x41, 0x7f, 0x3e, 0x00, // 79=O
+    0x00, 0x7f, 0x7f, 0x09, 0x09, 0x0f, 0x06, 0x00, // 80=P
+    0x00, 0x1e, 0x3f, 0x21, 0x61, 0x7f, 0x5e, 0x00, // 81=Q
+    0x00, 0x7f, 0x7f, 0x19, 0x39, 0x6f, 0x46, 0x00, // 82=R
+    0x00, 0x26, 0x6f, 0x49, 0x49, 0x7b, 0x32, 0x00, // 83=S
+    0x00, 0x01, 0x01, 0x7f, 0x7f, 0x01, 0x01, 0x00, // 84=T
+    0x00, 0x3f, 0x7f, 0x40, 0x40, 0x7f, 0x3f, 0x00, // 85=U
+    0x00, 0x1f, 0x3f, 0x60, 0x60, 0x3f, 0x1f, 0x00, // 86=V
+    0x00, 0x7f, 0x7f, 0x30, 0x18, 0x30, 0x7f, 0x7f, // 87=W
+    0x00, 0x63, 0x77, 0x1c, 0x1c, 0x77, 0x63, 0x00, // 88=X
+    0x00, 0x07, 0x0f, 0x78, 0x78, 0x0f, 0x07, 0x00, // 89=Y
+    0x00, 0x61, 0x71, 0x59, 0x4d, 0x47, 0x43, 0x00, // 90=Z
+    0x00, 0x00, 0x7f, 0x7f, 0x41, 0x41, 0x00, 0x00, // 91=[
+    0x00, 0x02, 0x06, 0x0c, 0x18, 0x30, 0x60, 0x40, // 92='\'
+    0x00, 0x00, 0x41, 0x41, 0x7f, 0x7f, 0x00, 0x00, // 93=]
+    0x00, 0x08, 0x0c, 0x06, 0x06, 0x0c, 0x08, 0x00, // 94=^
+    0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, // 95=_
+    0x00, 0x00, 0x01, 0x03, 0x06, 0x04, 0x00, 0x00, // 96=`
+    0x00, 0x20, 0x74, 0x54, 0x54, 0x7c, 0x78, 0x00, // 97=a
+    0x00, 0x7f, 0x7f, 0x44, 0x44, 0x7c, 0x38, 0x00, // 98=b
+    0x00, 0x38, 0x7c, 0x44, 0x44, 0x6c, 0x28, 0x00, // 99=c
+    0x00, 0x38, 0x7c, 0x44, 0x44, 0x7f, 0x7f, 0x00, // 100=d
+    0x00, 0x38, 0x7c, 0x54, 0x54, 0x5c, 0x58, 0x00, // 101=e
+    0x00, 0x08, 0x7e, 0x7f, 0x09, 0x03, 0x02, 0x00, // 102=f
+    0x00, 0x98, 0xbc, 0xa4, 0xa4, 0xfc, 0x7c, 0x00, // 103=g
+    0x00, 0x7f, 0x7f, 0x04, 0x04, 0x7c, 0x78, 0x00, // 104=h
+    0x00, 0x00, 0x00, 0x7d, 0x7d, 0x00, 0x00, 0x00, // 105=i
+    0x00, 0x40, 0xc0, 0x80, 0x80, 0xfd, 0x7d, 0x00, // 106=j
+    0x00, 0x7f, 0x7f, 0x30, 0x38, 0x6c, 0x44, 0x00, // 107=k
+    0x00, 0x00, 0x41, 0x7f, 0x7f, 0x40, 0x00, 0x00, // 108=l
+    0x00, 0x7c, 0x7c, 0x18, 0x30, 0x18, 0x7c, 0x7c, // 109=m
+    0x00, 0x7c, 0x7c, 0x04, 0x04, 0x7c, 0x78, 0x00, // 110=n
+    0x00, 0x38, 0x7c, 0x44, 0x44, 0x7c, 0x38, 0x00, // 111=o
+    0x00, 0xfc, 0xfc, 0x24, 0x24, 0x3c, 0x18, 0x00, // 112=p
+    0x00, 0x18, 0x3c, 0x24, 0x24, 0xfc, 0xfc, 0x00, // 113=q
+    0x00, 0x7c, 0x7c, 0x04, 0x04, 0x0c, 0x08, 0x00, // 114=r
+    0x00, 0x48, 0x5c, 0x54, 0x54, 0x74, 0x20, 0x00, // 115=s
+    0x04, 0x04, 0x3f, 0x7f, 0x44, 0x64, 0x20, 0x00, // 116=t
+    0x00, 0x3c, 0x7c, 0x40, 0x40, 0x7c, 0x3c, 0x00, // 117=u
+    0x00, 0x1c, 0x3c, 0x60, 0x60, 0x3c, 0x1c, 0x00, // 118=v
+    0x00, 0x1c, 0x7c, 0x30, 0x18, 0x30, 0x7c, 0x1c, // 119=w
+    0x00, 0x44, 0x6c, 0x38, 0x38, 0x6c, 0x44, 0x00, // 120=x
+    0x00, 0x9c, 0xbc, 0xa0, 0xa0, 0xfc, 0x7c, 0x00, // 121=y
+    0x00, 0x44, 0x64, 0x74, 0x5c, 0x4c, 0x44, 0x00, // 122=z
+    0x00, 0x08, 0x08, 0x3e, 0x77, 0x41, 0x41, 0x00, // 123={
+    0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, // 124=|
+    0x00, 0x41, 0x41, 0x77, 0x3e, 0x08, 0x08, 0x00, // 125=}
+    0x00, 0x02, 0x03, 0x01, 0x03, 0x02, 0x03, 0x01, // 126=~
+    0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, // 127
+};
+
+// Open the screen's SPI bus in one of its two clock shapes.
+void openBus(uint8_t mode, uint32_t speed) {
+  shape = SPISettings(speed, MSBFIRST, mode == 3 ? SPI_MODE3 : SPI_MODE0);
+}
+
+// Send one command byte, then its data bytes.
+void command(uint8_t code, const uint8_t* data = nullptr, size_t len = 0) {
+  bus.beginTransaction(shape);
+  digitalWrite(SCREEN_CS, LOW);
+  digitalWrite(SCREEN_DC, LOW);
+  bus.transfer(code);
+  digitalWrite(SCREEN_DC, HIGH);
+  if (len > 0) bus.writeBytes(data, len);
+  digitalWrite(SCREEN_CS, HIGH);
+  bus.endTransaction();
+}
+
+// Ask for one byte of a register the chip can read back.
+uint8_t read(uint8_t code) {
+  bus.beginTransaction(shape);
+  digitalWrite(SCREEN_CS, LOW);
+  digitalWrite(SCREEN_DC, LOW);
+  bus.transfer(code);
+  digitalWrite(SCREEN_DC, HIGH);
+  uint8_t value = bus.transfer(0);
+  digitalWrite(SCREEN_CS, HIGH);
+  bus.endTransaction();
+  return value;
+}
+
+// Which chip is this? Returns it, or nullptr, and writes the bytes it
+// answered into answer (up to 6).
+//
+// The ST7789 answers its id registers 0xDA, 0xDB and 0xDC with 85 85 52.
+// The ILI9341 shows its id register 0xD3 one byte at a time, each picked
+// with command 0xD9 first, and answers ... 93 41.
+const Chip* askChip(uint8_t answer[6], int& count) {
+  answer[0] = read(0xDA);
+  answer[1] = read(0xDB);
+  answer[2] = read(0xDC);
+  count = 3;
+  if (answer[0] == 0x85 && answer[1] == 0x85 && answer[2] == 0x52) return &ST7789;
+  for (int index = 1; index <= 3; index++) {
+    uint8_t pick = 0x10 + index;
+    command(0xD9, &pick, 1);
+    answer[count++] = read(0xD3);
+  }
+  if (answer[4] == 0x93 && answer[5] == 0x41) return &ILI9341;
+  return nullptr;
+}
+
+// Choose the rectangle the next pixels go into, and start sending; the
+// caller sends the pixels and calls endPixels().
+void area(int x, int y, int w, int h) {
+  uint8_t xs[4] = {(uint8_t)(x >> 8), (uint8_t)(x & 0xFF), (uint8_t)((x + w - 1) >> 8), (uint8_t)((x + w - 1) & 0xFF)};
+  uint8_t ys[4] = {(uint8_t)(y >> 8), (uint8_t)(y & 0xFF), (uint8_t)((y + h - 1) >> 8), (uint8_t)((y + h - 1) & 0xFF)};
+  command(0x2A, xs, 4);
+  command(0x2B, ys, 4);
+  bus.beginTransaction(shape);
+  digitalWrite(SCREEN_CS, LOW);
+  digitalWrite(SCREEN_DC, LOW);
+  bus.transfer(0x2C);  // pixels follow
+  digitalWrite(SCREEN_DC, HIGH);
+}
+
+void endPixels() {
+  digitalWrite(SCREEN_CS, HIGH);
+  bus.endTransaction();
+}
+
+// One byte to and from the touch chip, on its own pins (1 MHz or less,
+// clock idle low, read on the rising edge).
+uint8_t touchByte(uint8_t out) {
+  uint8_t in = 0;
+  for (int bit = 7; bit >= 0; bit--) {
+    digitalWrite(TOUCH_TO_CHIP, (out >> bit) & 1);
+    delayMicroseconds(1);
+    digitalWrite(TOUCH_CLOCK, HIGH);
+    in = (uint8_t)(in << 1 | (digitalRead(TOUCH_FROM_CHIP) ? 1 : 0));
+    delayMicroseconds(1);
+    digitalWrite(TOUCH_CLOCK, LOW);
+  }
+  return in;
+}
+
+// One 12-bit reading from the touch chip.
+int touchRead(uint8_t code) {
+  digitalWrite(TOUCH_CS, LOW);
+  touchByte(code);
+  uint8_t high = touchByte(0);
+  uint8_t low = touchByte(0);
+  digitalWrite(TOUCH_CS, HIGH);
+  return ((high << 8) | low) >> 3;
+}
+
+}  // namespace
+
+const char* start() {
+  pinMode(SCREEN_DC, OUTPUT);
+  digitalWrite(SCREEN_DC, HIGH);
+  pinMode(SCREEN_CS, OUTPUT);
+  digitalWrite(SCREEN_CS, HIGH);
+  pinMode(SCREEN_LIGHT, OUTPUT);
+  digitalWrite(SCREEN_LIGHT, LOW);
+  pinMode(TOUCH_PEN, INPUT);  // low while pressed (the board pulls it up)
+  pinMode(TOUCH_CS, OUTPUT);
+  digitalWrite(TOUCH_CS, HIGH);
+  pinMode(TOUCH_CLOCK, OUTPUT);
+  digitalWrite(TOUCH_CLOCK, LOW);
+  pinMode(TOUCH_TO_CHIP, OUTPUT);
+  pinMode(TOUCH_FROM_CHIP, INPUT);
+  bus.begin(14, 12, 13, -1);  // clock, from the screen, to the screen
+
+  const Chip* chip = nullptr;
+  uint8_t answer[6];
+  int count = 0;
+  if (strcmp(CHIP, "ILI9341") == 0) chip = &ILI9341;
+  if (strcmp(CHIP, "ST7789") == 0) chip = &ST7789;
+  bool asked = CHIP[0] == '\0';
+  if (asked) {
+    for (uint8_t mode : {(uint8_t)0, (uint8_t)3}) {  // the two clock shapes these chips use
+      openBus(mode, 4000000);                      // read slowly: reads are slower than writes
+      command(0x01);                               // software reset
+      delay(150);
+      chip = askChip(answer, count);
+      if (chip != nullptr) break;
+    }
+  }
+  GUESSED = asked && chip == nullptr;
+  const Chip& found = chip != nullptr ? *chip : FALLBACK;
+  openBus(found.mode, 40000000);
+  command(0x01);  // software reset
+  delay(150);
+  command(0x11);  // wake up
+  delay(120);
+  uint8_t sixteen = 0x55;
+  command(0x3A, &sixteen, 1);  // 16 bits per pixel
+  if (found.c0) {
+    uint8_t c0 = 0x0C;
+    command(0xC0, &c0, 1);
+  }
+  uint8_t turn = found.turn ^ (FLIP ? 0xC0 : 0) ^ (MIRROR ? 0x80 : 0) ^ (SWAP_RED_BLUE ? 0x08 : 0);
+  command(0x36, &turn, 1);                          // sideways, right way up
+  command(found.invert || INVERT ? 0x21 : 0x20);    // colours inverted or not
+  command(0x29);                                    // screen on
+  fill(0, 0, WIDTH, HEIGHT, rgb(0, 0, 0));
+  backlight(true);
+  touchRead(0xD0);  // lets the pen line work
+
+  char raw[24] = "";
+  for (int i = 0; i < count; i++) snprintf(raw + strlen(raw), sizeof raw - strlen(raw), i ? " %02x" : "%02x", answer[i]);
+  if (chip != nullptr && asked) {
+    snprintf(said, sizeof said, "screen: %s (answered %s)", found.name, raw);
+  } else if (!asked) {
+    snprintf(said, sizeof said, "screen: %s (set in screen.h)", found.name);
+  } else {
+    snprintf(said, sizeof said,
+             "screen: no answer (%s), using the %s settings; if the picture is wrong, set CHIP = \"%s\" at the top of screen.h",
+             raw, found.name, &found == &ST7789 ? "ILI9341" : "ST7789");
+  }
+  return said;
+}
+
+void backlight(bool on) { digitalWrite(SCREEN_LIGHT, on ? HIGH : LOW); }
+
+void fill(int x, int y, int w, int h, uint16_t colour) {
+  if (w <= 0 || h <= 0) return;
+  uint8_t two[2] = {(uint8_t)(colour >> 8), (uint8_t)(colour & 0xFF)};
+  area(x, y, w, h);
+  bus.writePattern(two, 2, (uint32_t)w * (uint32_t)h);
+  endPixels();
+}
+
+void text(int x, int y, const char* words, int size, uint16_t colour, uint16_t background) {
+  int n = (int)strlen(words);
+  if (n > WIDTH / (8 * size)) n = WIDTH / (8 * size);  // the row buffer holds one screen width
+  if (n == 0) return;
+  area(x, y, n * 8 * size, 8 * size);
+  for (int r = 0; r < 8; r++) {       // each row of the 8x8 letters...
+    int i = 0;
+    for (int c = 0; c < n * 8; c++) {  // ...widened to size pixels each
+      unsigned char letter = (unsigned char)words[c / 8];
+      if (letter < ' ' || letter > '~') letter = '?';
+      bool on = (LETTERS[(letter - 32) * 8 + c % 8] >> r) & 1;
+      uint16_t pixel = on ? colour : background;
+      for (int s = 0; s < size; s++) {
+        row[i++] = (uint8_t)(pixel >> 8);
+        row[i++] = (uint8_t)(pixel & 0xFF);
+      }
+    }
+    for (int s = 0; s < size; s++) bus.writeBytes(row, (size_t)i);  // ...and repeated size times
+  }
+  endPixels();
+}
+
+bool touched() {
+  // The pen line alone is not enough: on this chip, pin 36 can dip for a
+  // moment when the radio is busy. So a press also has to show pressure.
+  if (digitalRead(TOUCH_PEN) == HIGH) return false;
+  int z1 = touchRead(0xB0);
+  int z2 = touchRead(0xC0);
+  return z1 + 4095 - z2 > PRESS;
+}
+
+}  // namespace screen
