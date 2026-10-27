@@ -17,16 +17,16 @@ namespace {
 // MicroPython desk display's; the ST7789's come from TFT_eSPI and the CYD
 // board files, not yet from a board: its rotation table differs from the ILI9341's by the
 // mirror bit (0x40), and its C0h register, left at its reset value 0x2C,
-// would swap blue and red.
+// would swap blue and red. Neither inverts its colours on these boards;
+// INVERT in screen.h does, for a panel that needs it.
 struct Chip {
   const char* name;
   uint8_t turn;
-  bool invert;
   uint8_t mode;
   bool c0;
 };
-const Chip ILI9341 = {"ILI9341", 0xE8, false, 0, false};
-const Chip ST7789 = {"ST7789", 0xA8, false, 3, true};
+const Chip ILI9341 = {"ILI9341", 0xE8, 0, false};
+const Chip ST7789 = {"ST7789", 0xA8, 3, true};
 // If the screen does not answer: the ST7789 board's data line from the
 // screen is not connected, so it never answers; ILI9341 boards do.
 const Chip& FALLBACK = ST7789;
@@ -299,7 +299,7 @@ const char* start() {
   }
   uint8_t turn = found.turn ^ (FLIP ? 0xC0 : 0) ^ (MIRROR ? 0x80 : 0) ^ (SWAP_RED_BLUE ? 0x08 : 0);
   command(0x36, &turn, 1);                          // sideways, right way up
-  command(found.invert || INVERT ? 0x21 : 0x20);    // colours inverted or not
+  command(INVERT ? 0x21 : 0x20);                    // colours inverted or not
   command(0x29);                                    // screen on
   fill(0, 0, WIDTH, HEIGHT, rgb(0, 0, 0));
   backlight(true);
