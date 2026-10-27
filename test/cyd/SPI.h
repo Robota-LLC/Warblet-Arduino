@@ -42,18 +42,23 @@ struct SimPanel {
   uint8_t lastCommand = 0;
   uint8_t picked = 0;             // the index set with 0xD9
   int transactions = 0;           // open now
+  std::vector<int> pins;          // what begin() was given: clock, from the screen, to it, select
+  int endedSelected = 0;          // transactions ended while the screen was still selected (pin 15 low)
 };
 extern SimPanel simPanel;
 
 class SPIClass {
  public:
   explicit SPIClass(int) {}
-  void begin(int, int, int, int) {}
+  void begin(int clock, int fromChip, int toChip, int select) { simPanel.pins = {clock, fromChip, toChip, select}; }
   void beginTransaction(const SPISettings& s) {
     settings_ = s;
     simPanel.transactions++;
   }
-  void endTransaction() { simPanel.transactions--; }
+  void endTransaction() {
+    simPanel.transactions--;
+    if (simPin[15] == LOW) simPanel.endedSelected++;
+  }
   uint8_t transfer(uint8_t b) {
     bool command = simPin[2] == LOW;
     if (command) {

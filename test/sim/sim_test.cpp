@@ -434,6 +434,18 @@ int main() {
     }
   }
 
+  // 12a2. A report's first wait after a 5xx, or a 429 that names no time, is
+  // 20 s, as the reference's table says.
+  for (int code : {503, 429}) {
+    sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(code, "X") : answer(204, "No Content"); };
+    Warblet w;
+    w.begin();
+    w.wait(15000);
+    Serial.out.clear();
+    w.sendNumber(1);
+    check(said("messages wait 20 s,"), "a " + std::to_string(code) + " holds reports for 20 s first");
+  }
+
   // 12b. A long outage with Wi-Fi up (the server does not answer for 45
   // minutes): command checks slow down, but to a minute, not ten, so a
   // command queued meanwhile is collected soon after the server is back.
@@ -904,7 +916,9 @@ int main() {
     recorded.clear();
     w.wait(30000);
     check(recorded.empty(), "a command cut short at close is not handed over");
+    unsigned long sentAt = millis();
     check(!w.sendNumber(1), "a 202 cut short at close is not counted as stored");
+    check(millis() - sentAt < 1000, "...and the request ends when the connection closes, not at the 20 s answer limit");
     cut = false;
     w.wait(70000);
     check(w.sendNumber(2), "...and the next whole answer is");

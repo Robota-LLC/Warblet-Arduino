@@ -481,6 +481,26 @@ void testWire() {
   httpIngestHead(in, head, sizeof head);
   check(strstr(head, "X-Chirp-Token") == nullptr, "Open: no token header");
   check(httpIngestHead(in, head, 40) == 0, "a head that does not fit is refused, not cut");
+  {
+    // "" is not given, as nullptr is (present()): an empty tag, token or
+    // signature adds no header, an empty tag no topic level, and the signed
+    // input is the same as with no tag at all.
+    char none[600], empty[600], t1[64], t2[64];
+    httpIngestHead(in, none, sizeof none);
+    in.credential = "";
+    in.tag = "";
+    in.signature = "";
+    httpIngestHead(in, empty, sizeof empty);
+    in.credential = nullptr;
+    in.tag = nullptr;
+    in.signature = nullptr;
+    const uint8_t x[1] = {'x'};
+    uint8_t s1[64], s2[64];
+    size_t n1 = signedInput(5, "", x, 1, s1, sizeof s1), n2 = signedInput(5, nullptr, x, 1, s2, sizeof s2);
+    check(strcmp(none, empty) == 0 && topicUp("id", "", t1, sizeof t1) > 0 && topicUp("id", nullptr, t2, sizeof t2) > 0 &&
+              strcmp(t1, t2) == 0 && n1 == n2 && memcmp(s1, s2, n1) == 0,
+          "an empty tag, token or signature is none: same head, same topic, same signed input");
+  }
 
   // Collecting a command is a POST with an empty body (contract v0.43): a GET
   // with a claim code, or with no credential at all, is answered 405.

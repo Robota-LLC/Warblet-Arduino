@@ -150,6 +150,9 @@ int main() {
   for (auto& b : simPanel.wire) data += !b.command;
   check(data == 8 + 30 * 4 * 2 && screen::rgb(255, 0, 0) == 0xF800, "fill: the area's corners, then w x h pixels of 5-6-5 colour");
   check(simPanel.transactions == 0, "every SPI transaction is ended, drawing too");
+  check(simPanel.endedSelected == 0, "the screen is deselected before each transaction ends, drawing too");
+  check(simPanel.pins == std::vector<int>{14, 12, 13, -1},
+        "the bus: clock 14, data from the screen 12, data to it 13, select by hand (screen.h's pins)");
 
   printf("\nscreen (the desk display's screen.cpp on the PC): %d passed, %d failed\n%s\n", pass, fail,
          fail ? "FAILED" : "PASSED");
