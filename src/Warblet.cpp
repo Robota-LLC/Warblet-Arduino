@@ -27,6 +27,9 @@ const unsigned long kCommandCheckMinMs = 5000UL;  // the fastest a sketch may as
 const unsigned long kStuckMinMs = 300000UL;
 const unsigned long kCommandCheckMaxMs = 600000UL;  // the longest back-off, after refusals
 const unsigned long kUnansweredMaxMs = 60000UL;     // ...and when nothing answers (an outage)
+// Reports have no pace of their own (the sketch sends them): after a 429, a
+// 5xx or no answer they wait twice this first (20 s), then longer.
+const unsigned long kReportRetryMs = 10000UL;
 const unsigned long kSetupQuietMs = 10000UL;    // after a CHIRP? answer: USB only
 const unsigned long kJoinWaitMs = 12000UL;      // per network, as the demos do
 const unsigned long kJoinRetryMs = 15000UL;     // between rounds of the list
@@ -56,7 +59,7 @@ bool copyField(char* field, size_t cap, const char* value) {
 Warblet::Warblet()
     : settings_(), scratch_(), setup_(scratch_), response_(nullptr, 0),
       commandChecks_(kCommandCheckMs, kCommandCheckMaxMs, kUnansweredMaxMs),
-      reports_(kCommandCheckMs, kCommandCheckMaxMs, kUnansweredMaxMs),
+      reports_(kReportRetryMs, kCommandCheckMaxMs, kUnansweredMaxMs),
       mqttRefusals_(kCommandCheckMs, kCommandCheckMaxMs, kUnansweredMaxMs) {}
 
 void Warblet::say(const char* text) {
