@@ -76,13 +76,13 @@ void Warblet::serviceMqtt() {
     } else if (n == board::kMqttLost) {
       answered(-1);
       say("MQTT session lost; the client reconnects by itself");
-    } else if (n == board::kMqttUnreachable && repeat) {
-      answered(-1);
     } else if (n == board::kMqttUnreachable) {
       answered(-1);
-      Serial.print("warblet: MQTT has no session (");
-      Serial.print(detail);
-      Serial.println("); the client keeps trying by itself - check the network, NTP and the host");
+      if (!repeat) {  // said once, not at every failed attempt
+        Serial.print("warblet: MQTT has no session (");
+        Serial.print(detail);
+        Serial.println("); the client keeps trying by itself - check the network, NTP and the host");
+      }
     } else if (n == board::kMqttNoDevice) {
       // Not on an account (its device was deleted, or its setup code was
       // spent): stop, as an "unclaimed" answer does over HTTPS.
