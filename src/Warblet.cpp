@@ -296,7 +296,6 @@ bool Warblet::serviceSetup() {
         lastJoin_ = 0;
         joinFailSaid_ = false;  // new networks: say the first round again
         waitingSaid_ = false;
-        headSaid_ = false;
         nextPoll_ = millis();
         holdMs_ = 0;  // reports refused with the old settings wait no longer
         reports_.reset();
@@ -467,16 +466,13 @@ bool Warblet::post(const uint8_t* bytes, size_t length, const char* tag) {
   uint64_t nonce = 0;
   char signature[65];
   if (hasKey_) {
-    nonce = nonces_.next(board::clockMs());  // 0 without a clock: body-only signature
+    nonce = nonces_.next(board::clockMs());  // never 0: nothing is sent before the clock is set
     signHeader(key_, sizeof key_, nonce, tag, bytes, length, signature);
   }
   HttpIngest request = {host(), settings_.hwId, settings_.credential, tag, nonce,
                         hasKey_ ? signature : nullptr, length};
+  // Fits: the longest head the setup's limits allow is host-tested.
   size_t headLen = httpIngestHead(request, head_, sizeof head_);
-  if (headLen == 0) {
-    say("the request does not fit; not sent");
-    return false;
-  }
   int status = exchange(headLen, bytes, length, answerBody_, sizeof answerBody_);
   if (status == 202 && answerIsUnclaimed(answerBody_, response_.bodyLen())) {
     // Warblet only noted a board it does not know (contract §HTTP): the device
@@ -540,22 +536,12 @@ int Warblet::poll() {
   char signature[65];
   if (hasKey_) {
     // At Signed, a poll must prove the key (contract §Auth → Downlink poll).
-    nonce = nonces_.next(board::clockMs());
-    if (nonce == 0) {
-      if (!noClockSaid_) say("no clock, so a signed board cannot ask for commands yet");
-      noClockSaid_ = true;
-      return -1;
-    }
+    nonce = nonces_.next(board::clockMs());  // never 0: no check before the clock is set
     signPoll(key_, sizeof key_, settings_.hwId, nonce, signature);
   }
   HttpPoll request = {host(), settings_.hwId, settings_.credential, nonce, hasKey_ ? signature : nullptr};
+  // Fits: the longest head the setup's limits allow is host-tested.
   size_t headLen = httpPollHead(request, head_, sizeof head_);
-  if (headLen == 0) {
-    // Cannot happen with settings the setup accepts (host-tested); said once if it does.
-    if (!headSaid_) say("the command check does not fit its buffer; commands cannot be collected");
-    headSaid_ = true;
-    return -1;
-  }
   int status = exchange(headLen, nullptr, 0, commandBody, kCommandMax);
   if (status == 202 && answerIsUnclaimed(commandBody, response_.bodyLen())) {
     // The ingest's answer for a board Warblet does not know, on a command

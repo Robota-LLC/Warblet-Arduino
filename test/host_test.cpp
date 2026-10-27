@@ -413,6 +413,15 @@ void testWire() {
     topicDown("sunny-otter-7c2f", t, sizeof t);
     checkStr(t, "chirp/sunny-otter-7c2f/down", "downlink topic");
     check(topicUp(std::string(100, 'a').c_str(), nullptr, t, sizeof t) == 0, "a topic that does not fit is refused");
+    // The longest topics fit the buffers WarbletMqtt.cpp gives them (200 and
+    // 160 bytes): a 128-character id and a 32-character tag. That file does
+    // not check the length again.
+    char up[200], down[160];
+    std::string id128(128, 'i'), tag32(32, 'g');
+    size_t ul = topicUp(id128.c_str(), tag32.c_str(), up, sizeof up);
+    size_t dl = topicDown(id128.c_str(), down, sizeof down);
+    check(ul > 0 && dl > 0, "the longest topics fit WarbletMqtt.cpp's buffers");
+    printf("      longest MQTT topics: up %u of 200 bytes, down %u of 160\n", (unsigned)ul, (unsigned)dl);
   }
 
   // Control characters.
@@ -422,7 +431,7 @@ void testWire() {
 
   // The longest head fits kHttpHeadMax: 128-character host, id and
   // token (a claim code, so it is sent twice), a 32-character tag, a 20-digit
-  // nonce and a signature.
+  // nonce and a signature. Warblet.cpp does not check the length again.
   {
     std::string h128(128, 'h'), id128(128, 'i'), tok128 = "CHIRP-" + std::string(122, 't');
     std::string tag32(32, 'g'), sig(64, 'a');

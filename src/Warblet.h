@@ -193,8 +193,6 @@ class Warblet {
   bool badSlug_ = false;  // demo() was given a slug the setup page cannot use
   bool joinFailSaid_ = false;
   bool clockSet_ = false;
-  bool noClockSaid_ = false;
-  bool headSaid_ = false;
   unsigned long nextPoll_ = 0;
   int taken_ = 0;  // commands taken one after another this round
   unsigned long lastJoin_ = 0;
