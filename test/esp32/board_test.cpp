@@ -16,6 +16,7 @@
 
 #include "WarbletBoard.h"
 #include "WarbletRoots.h"
+#include "warblet/core/wire.h"
 #include "WiFiClientSecure.h"
 #include "esp_tls_errors.h"
 #include "stub_control.h"
@@ -71,6 +72,16 @@ int main() {
   // 2 KB, and it must be set before begin() (the core keeps it only then).
   serialBegin(115200);
   check(Serial.rxCapAtBegin == 2048, "serial: the receive buffer is 2 KB when begin() runs");
+
+  // ---- the clock ---------------------------------------------------------------
+  // NTP's time is taken only from 2025-01-01 on, the nonce floor, so a board
+  // whose clock is set always signs with a real nonce (poll() no longer checks).
+  simEspTime = 1735689599;  // a second before 2025: NTP has not answered yet
+  bool early = syncClock(1000);
+  check(!early && clockMs() == 0, "clock: a time before 2025 is not taken; the board waits for NTP");
+  simEspTime = 1735689600;
+  check(syncClock(1000) && clockMs() >= warblet::NonceClock::kClockSaneMs,
+        "clock: from 2025-01-01 the time is taken, and a nonce made from it is real");
 
   // ---- HTTPS client limits ---------------------------------------------------
   Client& c = tlsClient();

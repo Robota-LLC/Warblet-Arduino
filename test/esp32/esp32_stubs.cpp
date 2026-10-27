@@ -25,6 +25,7 @@ SimEsp ESP;
 SimWiFi WiFi;
 
 void configTime(long, int, const char*, const char*) {}
+time_t simEspTime = 1792800000;  // 2026-10-24: a clock NTP has set
 
 namespace stub {
 Config config;

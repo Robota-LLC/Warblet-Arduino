@@ -39,3 +39,10 @@ struct SimEsp {
 extern SimEsp ESP;
 
 void configTime(long gmtOffsetS, int daylightOffsetS, const char* server1, const char* server2);
+
+// The time NTP has given the board, as time() reads it: a test sets it, so
+// the board layer can be handed a clock from before 2025. Defined after
+// <time.h>, so the C library's own time() is left as it is.
+#include <time.h>
+extern time_t simEspTime;
+#define time(now) (simEspTime)
