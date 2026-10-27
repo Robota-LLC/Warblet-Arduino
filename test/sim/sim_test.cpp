@@ -1356,6 +1356,22 @@ int main() {
           "MQTT code 4: a new setup over USB brings it back");
   }
 
+  // 18. The longest id (128 characters) and tag (32) go out whole over MQTT.
+  // WarbletMqtt.cpp builds its topics in fixed buffers and does not check
+  // them again, so this holds those buffers to the longest topics.
+  {
+    broker = SimBroker();
+    sim.refusedMark.clear();
+    std::string id(128, 'i'), tag(32, 'g');
+    Warblet m(Warblet::MQTT);
+    m.begin("lab", "pw", id.c_str(), "TOKEN-LONGEST");
+    m.wait(3000);
+    bool sent = m.sendNumber(7, tag.c_str());
+    check(sent && broker.subscribe == "chirp/" + id + "/down" && !broker.published.empty() &&
+              broker.published.back().first == "chirp/" + id + "/up/" + tag,
+          "MQTT: a 128-character id and a 32-character tag give whole topics, down and up");
+  }
+
   printf("\nsim: %d passed, %d failed\n%s\n", pass, fail, fail ? "FAILED" : "PASSED");
   return fail ? 1 : 0;
 }
