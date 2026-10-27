@@ -2,8 +2,8 @@
 // the clock, and where settings are kept. Everything else is in Warblet.cpp
 // and the portable core (src/warblet/core), which is host-tested.
 //
-// ESP32 boards on the Arduino core for ESP32 3.x; the UNO R4 WiFi and Pico W
-// sections are not ready and stop the build.
+// ESP32 boards on the Arduino core for ESP32 3.x; any other board stops the
+// build.
 #pragma once
 
 #include <Arduino.h>
