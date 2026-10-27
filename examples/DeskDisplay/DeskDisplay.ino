@@ -7,8 +7,9 @@
 //
 // Choose the board "ESP32-2432S028R CYD" and upload. Then set it up over USB
 // at warbletiot.com/flash; the screen says what to do. The setup page gives
-// the device this demo's decoder, its Message box and Clear button, and the
-// disk routine. screen.h has the settings for a wrong picture.
+// the device this demo's decoder, its Message box and Clear button, and adds
+// the disk routine to your account. screen.h has the settings for a wrong
+// picture.
 #include <WiFi.h>
 #include <Warblet.h>
 #include <ctype.h>
