@@ -956,6 +956,76 @@ int main() {
     sim.stored = storedBefore;  // the next scenarios expect the earlier key
   }
 
+  // 12k2. Only a stored push starts the waits afresh. A push the board refuses
+  // (bad-json) resets nothing: the checks stay as far apart as the refusals
+  // had made them, and their refusal is not said again.
+  {
+    std::string storedBefore = sim.stored;
+    sim.restarts.clear();
+    sim.server = [&](const SimRequest&) { return answer(401, "Unauthorized"); };
+    Warblet w;
+    w.begin();
+    w.onCommand(recordCommand);
+    for (int i = 0; i < 12000; i++) { w.loop(); delay(100); }  // twenty minutes: the checks are ten apart now
+    Serial.out.clear();
+    size_t at = sim.requests.size();
+    Serial.type("CHIRP+ {\"ssid\":}\r\n");
+    for (int i = 0; i < 15000; i++) { w.loop(); delay(100); }  // twenty-five minutes
+    std::vector<unsigned long> checks;
+    for (size_t i = at; i < sim.requests.size(); i++) {
+      if (isPoll(sim.requests[i])) checks.push_back(sim.requests[i].at);
+    }
+    bool apart = checks.size() >= 2;
+    for (size_t i = 1; i < checks.size(); i++) apart = apart && checks[i] - checks[i - 1] >= 590000;
+    check(said("CHIRP= err bad-json") && apart && occurrences("command check refused") == 0,
+          "a refused push resets nothing: the checks stay ten minutes apart, and the refusal is not said again");
+    sim.stored = storedBefore;
+  }
+
+  // 12k3. A signing key that arrives over the air resets nothing either: a
+  // report held after a refusal stays held, and the next refusal waits twice
+  // as long, not a minute again. Only the person at the USB cable starts the
+  // waits afresh.
+  {
+    std::string storedBefore = sim.stored;
+    bool giveKey = false;
+    sim.server = [&](const SimRequest& r) -> std::string {
+      if (isUplink(r)) return answer(401, "Unauthorized");
+      if (!giveKey) return answer(204, "No Content");
+      giveKey = false;
+      return answer(200, "OK", std::string("CHIRPKEY1 ") + kKey2 + "\n", "X-Chirp-Down: key\r\n");
+    };
+    Warblet w;
+    w.begin();
+    w.onCommand(recordCommand);
+    w.wait(15000);
+    w.sendNumber(1);  // 401: messages wait a minute
+    w.wait(61000);
+    w.sendNumber(2);  // 401 again: two minutes (said once, so not on the console again)
+    giveKey = true;
+    w.wait(11000);  // the next check brings the key
+    bool keyed = said("a signing key arrived over the air");
+    size_t at = sim.requests.size();
+    bool held = !w.sendNumber(3);
+    int uplinks = 0;
+    for (size_t i = at; i < sim.requests.size(); i++) uplinks += isUplink(sim.requests[i]);
+    w.wait(120000);  // the two minutes are over
+    w.sendNumber(4);  // 401: the wait doubles to four minutes
+    at = sim.requests.size();
+    unsigned long refusedAt = millis(), next = 0;
+    for (int i = 0; i < 300 && next == 0; i++) {
+      w.wait(1000);
+      w.sendNumber(5);
+      for (size_t k = at; k < sim.requests.size() && next == 0; k++) {
+        if (isUplink(sim.requests[k])) next = sim.requests[k].at - refusedAt;
+      }
+    }
+    check(keyed && held && uplinks == 0 && next >= 239000,
+          "a key over the air resets nothing: the held report stays held, and the next wait is 4 minutes, not 1");
+    printf("      after a key over the air: next report %lu s after the refusal that followed it\n", next / 1000);
+    sim.stored = storedBefore;
+  }
+
   // 13. board.wait(): a setup push and a command both arrive during a long
   // wait and are handled before it returns.
   {
