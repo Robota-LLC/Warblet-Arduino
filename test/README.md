@@ -47,7 +47,7 @@ The reference for the v0.31 input is:
 
 ## The public calls (`test/api`)
 
-`api_test.cpp` is compiled, not run: it takes every call and overload the reference lists, each with its exact type, and calls them as a sketch does with the optional arguments left out. Removing or changing one stops the suite.
+`api_test.cpp` is built and linked with the library and the simulated board, and its `main()` calls nothing: it takes every call and overload the reference lists, each with its exact type, and calls them as a sketch does with the optional arguments left out. Removing or changing one, or leaving one declared with no definition, stops the suite.
 
 ## The sketch-facing layer, simulated (`test/sim`)
 
@@ -57,10 +57,10 @@ The reference for the v0.31 input is:
 - a fake Warblet server, which answers a command check only as a `POST`;
 - a fake MQTT broker that knows only `mqtt.warbletiot.com`. Like Espressif's client on the board, it ends every failed attempt with a disconnect.
 
-`sim_test.cpp` (153 checks) covers:
+`sim_test.cpp` (154 checks) covers:
 - **setup:** waiting for settings; the setup page's probe and push; settings loaded after a restart; typed settings; a push that arrives while the board is busy (nothing is sent for 10 s after the probe, and a push over 256 bytes survives a 1.5 s request with the 2 KB buffer, but is lost at 256 bytes); a corrected network tried at once.
 - **messages:** the first message carrying the setup code; `led:on` reaching the sketch; `led:blink`, whose command function waits with `board.wait(200)`, starting no second command check; a key over USB, after which every signature verifies and nonces always increase; a key frame over the air; refusals named; numbers as text and as two bytes.
-- **waiting:** ten minutes of 401s (4 command checks, 1 console line); a 429 that waits for `Retry-After`; a rate 429 told from a budget 429; a 45-minute outage (a queued command arrives 50 s after the server is back); no command checks without a command function; a reply cut short at close, neither handed over nor counted as stored, and the request over at once; a report's first wait of 20 s after a 503, or a 429 with no `Retry-After`; a new setup over USB starting the command checks' wait again (refused after it, the next check comes a minute later and the refusal is said again, not ten minutes later and unsaid); and a refused (bad-json) push or a key that arrives over the air starting no wait afresh.
+- **waiting:** ten minutes of 401s (4 command checks, 1 console line); a 429 that waits for `Retry-After`; a rate 429 told from a budget 429; a 45-minute outage (a queued command arrives 50 s after the server is back); no command checks without a command function; a reply cut short at close, neither handed over nor counted as stored, and the request over at once; a report's first wait of 20 s after a 503, or a 429 with no `Retry-After`; a new setup over USB starting the command checks' wait again (refused after it, the next check comes a minute later and the refusal is said again, not ten minutes later and unsaid); and a refused (bad-json) push, a good push the board could not store, or a key that arrives over the air starting no wait afresh (a held report stays held, the next refused one waits twice as long, the checks stay as far apart).
 - **`board.wait(60000)`:** a setup push arriving 5 s in is stored; a command queued before the wait arrives; the wait takes 60 s; a 2,000-character command arrives whole, and one past 8 KiB is dropped and said.
 - **stays connected (simulated):** a board reporting once a minute stores again after each fault ends: Wi-Fi gone for 3 and for 20 minutes (61 s), TLS refused or DNS failing (1 s), a server that never answers (1 s), junk on the USB port (1 s), a restart (1 s). Twenty minutes without Wi-Fi are 45 tries and 3 console lines, not two lines a try.
 - **not on an account:** after `202 {"status":"unclaimed"}`, nothing is sent for 20 minutes, Wi-Fi is off, the console says so once, the board keeps a fingerprint and never the code, a restart stays stopped, a Wi-Fi-only push does not count, and a new setup brings it back; a board with typed settings is told to change them in the sketch.
@@ -71,8 +71,9 @@ It proves the logic of `Warblet.cpp` and `WarbletMqtt.cpp`. **It cannot see real
 
 ## The ESP32 board layer (`test/esp32`)
 
-`board_test.cpp` compiles the ESP32 section of `src/WarbletBoard.cpp`, unmodified, against stand-ins of the ESP32 core and of Espressif's MQTT client with the core's own names (35 checks). The stand-in client follows ESP-IDF v5.5.5's `mqtt_client.c` where the library depends on it: a failed attempt ends in an error and a disconnect; a long message arrives in pieces; an unacknowledged QoS 1 report is sent again after `message_retransmit_timeout`; the outbox drops a report after 30 s. It checks:
+`board_test.cpp` compiles the ESP32 section of `src/WarbletBoard.cpp`, unmodified, against stand-ins of the ESP32 core and of Espressif's MQTT client with the core's own names (37 checks). The stand-in client follows ESP-IDF v5.5.5's `mqtt_client.c` where the library depends on it: a failed attempt ends in an error and a disconnect; a long message arrives in pieces; an unacknowledged QoS 1 report is sent again after `message_retransmit_timeout`; the outbox drops a report after 30 s. It checks:
 - the serial receive buffer is 2 KB when `begin()` runs;
+- the clock: a time from before 2025-01-01 is not taken, one from that date on is, and a nonce from it is real (`time()` here returns what the test sets);
 - the TLS limits and the pinned roots;
 - the MQTT configuration, and that only the MQTT client's own log tag is quieted;
 - what the client's events mean: a failed attempt, a refusal (code 5), no device (code 4), a dropped session;
@@ -154,7 +155,10 @@ Each was reverted afterwards, and the suite passed again.
 | v0.1.1 review: a key over the air resetting every back-off | 1 simulation check |
 | v0.1.1 review: the screen selected before its bus transaction begins | 1 screen check in each build |
 | v0.1.1 review: `sendNumber(long)` removed | the public-call build (`test/api`) |
-| v0.1.1, NOT caught: the board setting its clock from any time, 1970 included | none: the PC build of the board layer cannot set the clock |
+| v0.1.1: the board setting its clock from any time, 1970 included | 1 board check |
+| v0.1.1 re-judge: `sendNumber(long)` declared, its definition gone | the public-call build, at link |
+| v0.1.1 re-judge: a refused push releasing the reports' hold and back-off | 1 simulation check |
+| v0.1.1 re-judge: a push that could not be stored resetting every wait | 1 simulation check |
 
 `demo-c` fails only once under the older rule. It compares the demo's HMAC over the library's own input bytes, so it cannot judge the shape.
 ## Where the library is stricter than `chirp_prov.py`, on purpose
