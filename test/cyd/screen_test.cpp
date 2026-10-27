@@ -26,6 +26,14 @@ SimPanel simPanel;
 
 namespace {
 
+// run_tests.sh builds this once as screen.h ships it and once with its
+// INVERT on (and EXPECT_INVERT): the colours must follow INVERT on both chips.
+#if defined(EXPECT_INVERT)
+const bool kInvert = true;
+#else
+const bool kInvert = false;
+#endif
+
 int pass = 0, fail = 0;
 
 void check(bool ok, const std::string& what) {
@@ -79,7 +87,8 @@ int main() {
   for (auto& r : simPanel.reads) slowReads = slowReads && r.clock == 4000000 && r.mode == 0;
   check(slowReads, "ILI9341: the id is read slowly (4 MHz), in SPI mode 0");
   check(commandData(0x36) == std::vector<uint8_t>{0xE8}, "ILI9341: sideways with 0xE8, the MicroPython desk display's setting");
-  check(!sent(0xC0) && sent(0x20) && !sent(0x21), "ILI9341: no C0h, colours not inverted");
+  check(!sent(0xC0) && sent(kInvert ? 0x21 : 0x20) && !sent(kInvert ? 0x20 : 0x21),
+        "ILI9341: no C0h; colours inverted only when screen.h's INVERT is on");
   check(commandData(0x3A) == std::vector<uint8_t>{0x55} && sent(0x11) && sent(0x29), "ILI9341: woken, 16 bits a pixel, on");
   bool fast = true;
   for (auto& b : simPanel.wire) fast = fast && (b.clock == 4000000 || (b.clock == 40000000 && b.mode == 0));
@@ -94,6 +103,8 @@ int main() {
   bool mode3 = false;
   for (auto& b : simPanel.wire) mode3 = mode3 || (b.clock == 40000000 && b.mode == 3);
   check(mode3, "ST7789: drawn in SPI mode 3");
+  check(sent(kInvert ? 0x21 : 0x20) && !sent(kInvert ? 0x20 : 0x21),
+        "ST7789: colours inverted only when screen.h's INVERT is on");
 
   // ---- the two-USB ST7789 board: its data line from the screen is not wired --
   line = startAs("none");
@@ -150,11 +161,14 @@ int main() {
   for (auto& b : simPanel.wire) data += !b.command;
   check(data == 8 + 30 * 4 * 2 && screen::rgb(255, 0, 0) == 0xF800, "fill: the area's corners, then w x h pixels of 5-6-5 colour");
   check(simPanel.transactions == 0, "every SPI transaction is ended, drawing too");
-  check(simPanel.endedSelected == 0, "the screen is deselected before each transaction ends, drawing too");
+  check(simPanel.outside == 0,
+        "the screen is selected only inside a bus transaction (not before it begins or after it ends), and every "
+        "byte goes inside one");
   check(simPanel.pins == std::vector<int>{14, 12, 13, -1},
         "the bus: clock 14, data from the screen 12, data to it 13, select by hand (screen.h's pins)");
 
-  printf("\nscreen (the desk display's screen.cpp on the PC): %d passed, %d failed\n%s\n", pass, fail,
+  printf("\nscreen%s (the desk display's screen.cpp on the PC): %d passed, %d failed\n%s\n",
+         kInvert ? ", built with INVERT on" : "", pass, fail,
          fail ? "FAILED" : "PASSED");
   return fail ? 1 : 0;
 }

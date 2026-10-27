@@ -43,7 +43,7 @@ struct SimPanel {
   uint8_t picked = 0;             // the index set with 0xD9
   int transactions = 0;           // open now
   std::vector<int> pins;          // what begin() was given: clock, from the screen, to it, select
-  int endedSelected = 0;          // transactions ended while the screen was still selected (pin 15 low)
+  int outside = 0;                // the screen selected (pin 15 low) outside a transaction, or a byte sent outside one
 };
 extern SimPanel simPanel;
 
@@ -52,14 +52,16 @@ class SPIClass {
   explicit SPIClass(int) {}
   void begin(int clock, int fromChip, int toChip, int select) { simPanel.pins = {clock, fromChip, toChip, select}; }
   void beginTransaction(const SPISettings& s) {
+    if (simPin[15] == LOW) simPanel.outside++;  // selected before the transaction began
     settings_ = s;
     simPanel.transactions++;
   }
   void endTransaction() {
     simPanel.transactions--;
-    if (simPin[15] == LOW) simPanel.endedSelected++;
+    if (simPin[15] == LOW) simPanel.outside++;  // still selected as it ends
   }
   uint8_t transfer(uint8_t b) {
+    if (simPanel.transactions == 0 || simPin[15] != LOW) simPanel.outside++;
     bool command = simPin[2] == LOW;
     if (command) {
       record(true, b);

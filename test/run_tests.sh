@@ -108,6 +108,14 @@ done
 # on the simulated board (test/cyd).
 "$CXX" -std=c++11 -Wall -Wextra -O1 -Itest/cyd -Itest/sim -Iexamples/DeskDisplay -o "$OUT/screen_test"   test/cyd/screen_test.cpp examples/DeskDisplay/screen.cpp
 "$OUT/screen_test"
+# Once more with screen.h's INVERT on: the colours are inverted on either chip.
+mkdir -p "$OUT/invert"
+sed "s/^const bool INVERT = false;/const bool INVERT = true; /" examples/DeskDisplay/screen.h > "$OUT/invert/screen.h"
+grep -q "^const bool INVERT = true;" "$OUT/invert/screen.h" || { echo "FAIL  INVERT could not be set in screen.h"; exit 1; }
+cp examples/DeskDisplay/screen.cpp "$OUT/invert/screen.cpp"
+"$CXX" -std=c++11 -Wall -Wextra -O1 -DEXPECT_INVERT -Itest/cyd -Itest/sim -I"$OUT/invert" -o "$OUT/screen_test_invert" \
+  test/cyd/screen_test.cpp "$OUT/invert/screen.cpp"
+"$OUT/screen_test_invert"
 "$CXX" -std=c++11 -Wall -Wextra -O1 -Itest/cyd -Itest/sim -Isrc -Iexamples/DeskDisplay -o "$OUT/desk_display_test"   test/cyd/desk_display_test.cpp test/cyd/fake_screen.cpp test/sim/fake_board.cpp src/Warblet.cpp src/WarbletMqtt.cpp   src/warblet/core/sha256.cpp src/warblet/core/text.cpp src/warblet/core/sign.cpp   src/warblet/core/wire.cpp src/warblet/core/json.cpp src/warblet/core/prov.cpp
 "$OUT/desk_display_test"
 
