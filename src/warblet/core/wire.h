@@ -177,6 +177,10 @@ class Backoff {
 
 // ---- downlink frames --------------------------------------------------------
 
+// The longest command the platform queues (contract v0.40). A longer one is
+// dropped and said, on either transport, never handed over cut short.
+static const size_t kCommandMax = 8192;
+
 // A downlink is either a command for the sketch or the platform handing the
 // board its signing key ("CHIRPKEY1 " + 44 base64 + "\n", contract §Fleet
 // keys → OTA wire format). The body magic is what decides, not the header.

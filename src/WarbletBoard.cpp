@@ -167,7 +167,6 @@ bool saveRefusedMark(const char* text) {
 
 namespace {
 
-const size_t kMqttCommandMax = 8192;   // the queue's own cap on a command
 const size_t kMqttWaitingMax = 32768;  // what commands waiting for loop() may hold together
 
 // One command, sized to it: filled on the client's task, then queued for
@@ -177,7 +176,7 @@ struct Command {
   Command* next;
   size_t total;  // its length, as the first piece says
   size_t len;    // bytes arrived so far
-  bool tooLong;  // over kMqttCommandMax: nothing kept, handed over as dropped
+  bool tooLong;  // over kCommandMax: nothing kept, handed over as dropped
   uint8_t data[1];
 };
 
@@ -227,7 +226,7 @@ void dropCutOff() {
 // The first piece of a command: room for all of it, or say it was dropped.
 void startCommand(esp_mqtt_event_handle_t e) {
   size_t total = e->total_data_len > 0 ? (size_t)e->total_data_len : 0;
-  bool tooLong = total > kMqttCommandMax;
+  bool tooLong = total > kCommandMax;
   size_t keep = tooLong ? 0 : total;
   portENTER_CRITICAL(&mqttLock);
   bool room = waitingBytes + keep <= kMqttWaitingMax;

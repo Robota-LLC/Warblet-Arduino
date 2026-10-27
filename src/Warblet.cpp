@@ -35,7 +35,6 @@ const unsigned long kClockResyncMs = 6UL * 3600UL * 1000UL;  // a crystal drifts
 const unsigned long kClockAfterRefusalMs = 15UL * 60UL * 1000UL;
 const unsigned long kAnswerWaitMs = 20000UL;
 const size_t kStoreMax = 2048;
-const size_t kCommandMax = 8192;  // the queue's own cap on a command (contract v0.40)
 const int kTakeAtOnce = 10;       // commands taken one after another before the normal pace
 
 // Static, not on the stack: small boards have small stacks.
@@ -566,7 +565,7 @@ int Warblet::poll() {
   }
   if (status != 200) return status;
   if (response_.tooLong()) {
-    say("a command longer than 8192 bytes arrived and was dropped");
+    sayTooLong();
     return status;
   }
   deliverCommand(response_.bodyLen());
@@ -629,6 +628,13 @@ void Warblet::deliverCommand(size_t len) {
     return;
   }
   handler_(String(reinterpret_cast<const char*>(commandBody)));
+}
+
+// A command over kCommandMax, from either transport.
+void Warblet::sayTooLong() {
+  Serial.print("warblet: a command longer than ");
+  Serial.print((unsigned)kCommandMax);
+  Serial.println(" bytes arrived and was dropped");
 }
 
 // The command buffer, for the MQTT code in WarbletMqtt.cpp.

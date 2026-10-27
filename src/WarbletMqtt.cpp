@@ -107,7 +107,7 @@ void Warblet::serviceMqtt() {
     int len = board::mqttTake(body, cap);
     if (len == 0) break;
     if (len < 0) {
-      say("a command longer than 8192 bytes arrived and was dropped");
+      sayTooLong();
       continue;
     }
     deliverCommand((size_t)len);

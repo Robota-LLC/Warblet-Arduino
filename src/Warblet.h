@@ -136,6 +136,7 @@ class Warblet {
   void serviceMqtt();
   void restartMqtt();
   void deliverCommand(size_t len);
+  void sayTooLong();
   const char* mqttHost() const;
   uint8_t* commandBuffer(size_t* cap);
   // The MQTT code (WarbletMqtt.cpp) is reached only through this table, and
