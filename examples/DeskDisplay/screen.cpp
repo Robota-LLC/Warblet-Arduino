@@ -164,28 +164,33 @@ void openBus(uint8_t mode, uint32_t speed) {
   shape = SPISettings(speed, MSBFIRST, mode == 3 ? SPI_MODE3 : SPI_MODE0);
 }
 
-// Send one command byte, then its data bytes.
-void command(uint8_t code, const uint8_t* data = nullptr, size_t len = 0) {
+// Take the bus and send a command byte; what follows is its data, until end().
+void begin(uint8_t code) {
   bus.beginTransaction(shape);
   digitalWrite(SCREEN_CS, LOW);
   digitalWrite(SCREEN_DC, LOW);
   bus.transfer(code);
   digitalWrite(SCREEN_DC, HIGH);
-  if (len > 0) bus.writeBytes(data, len);
+}
+
+// Let go of the bus.
+void end() {
   digitalWrite(SCREEN_CS, HIGH);
   bus.endTransaction();
 }
 
+// Send one command byte, then its data bytes.
+void command(uint8_t code, const uint8_t* data = nullptr, size_t len = 0) {
+  begin(code);
+  if (len > 0) bus.writeBytes(data, len);
+  end();
+}
+
 // Ask for one byte of a register the chip can read back.
 uint8_t read(uint8_t code) {
-  bus.beginTransaction(shape);
-  digitalWrite(SCREEN_CS, LOW);
-  digitalWrite(SCREEN_DC, LOW);
-  bus.transfer(code);
-  digitalWrite(SCREEN_DC, HIGH);
+  begin(code);
   uint8_t value = bus.transfer(0);
-  digitalWrite(SCREEN_CS, HIGH);
-  bus.endTransaction();
+  end();
   return value;
 }
 
@@ -211,22 +216,13 @@ const Chip* askChip(uint8_t answer[6], int& count) {
 }
 
 // Choose the rectangle the next pixels go into, and start sending; the
-// caller sends the pixels and calls endPixels().
+// caller sends the pixels and calls end().
 void area(int x, int y, int w, int h) {
   uint8_t xs[4] = {(uint8_t)(x >> 8), (uint8_t)(x & 0xFF), (uint8_t)((x + w - 1) >> 8), (uint8_t)((x + w - 1) & 0xFF)};
   uint8_t ys[4] = {(uint8_t)(y >> 8), (uint8_t)(y & 0xFF), (uint8_t)((y + h - 1) >> 8), (uint8_t)((y + h - 1) & 0xFF)};
   command(0x2A, xs, 4);
   command(0x2B, ys, 4);
-  bus.beginTransaction(shape);
-  digitalWrite(SCREEN_CS, LOW);
-  digitalWrite(SCREEN_DC, LOW);
-  bus.transfer(0x2C);  // pixels follow
-  digitalWrite(SCREEN_DC, HIGH);
-}
-
-void endPixels() {
-  digitalWrite(SCREEN_CS, HIGH);
-  bus.endTransaction();
+  begin(0x2C);  // pixels follow
 }
 
 // One byte to and from the touch chip, on its own pins (1 MHz or less,
@@ -329,7 +325,7 @@ void fill(int x, int y, int w, int h, uint16_t colour) {
   uint8_t two[2] = {(uint8_t)(colour >> 8), (uint8_t)(colour & 0xFF)};
   area(x, y, w, h);
   bus.writePattern(two, 2, (uint32_t)w * (uint32_t)h);
-  endPixels();
+  end();
 }
 
 void text(int x, int y, const char* words, int size, uint16_t colour, uint16_t background) {
@@ -351,7 +347,7 @@ void text(int x, int y, const char* words, int size, uint16_t colour, uint16_t b
     }
     for (int s = 0; s < size; s++) bus.writeBytes(row, (size_t)i);  // ...and repeated size times
   }
-  endPixels();
+  end();
 }
 
 bool touched() {
