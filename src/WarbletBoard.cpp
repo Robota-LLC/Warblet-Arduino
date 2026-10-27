@@ -10,13 +10,12 @@
 #include <time.h>
 
 #include "WarbletRoots.h"
+#include "warblet/core/wire.h"
 
 namespace warblet {
 namespace board {
 
 namespace {
-
-const uint64_t kClockSaneSeconds = 1735689600ULL;  // 2025-01-01: below this, never set
 
 uint64_t baseUnixMs = 0;
 unsigned long baseMillis = 0;
@@ -94,7 +93,7 @@ bool syncClock(unsigned long timeoutMs) {
   unsigned long start = millis();
   while (millis() - start < timeoutMs) {
     time_t now = time(nullptr);
-    if ((uint64_t)now >= kClockSaneSeconds) {
+    if ((uint64_t)now >= NonceClock::kClockSaneMs / 1000) {  // below it, never set
       setClock((uint64_t)now);
       return true;
     }

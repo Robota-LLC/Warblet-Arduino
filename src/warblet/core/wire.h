@@ -43,6 +43,8 @@ size_t topicDown(const char* hwId, char* out, size_t cap);
 class NonceClock {
  public:
   // 2025-01-01T00:00:00Z. A clock below this was never set, so no nonce.
+  // The board sets its clock only from a time past this (WarbletBoard.cpp),
+  // so once the clock is set every nonce is real.
   static const uint64_t kClockSaneMs = 1735689600000ULL;
   // Returns 0 when nowMs is below kClockSaneMs (no clock: send no nonce).
   uint64_t next(uint64_t nowMs);
