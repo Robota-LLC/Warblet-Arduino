@@ -45,6 +45,10 @@ The reference for the v0.31 input is:
 | `prov` | the USB setup protocol, with expectations written by hand | the parser's own rules | that they match the demos (`prov-demo` checks that) |
 | `prov-demo` | `test/prov_vectors.txt`: 49 pushes decided by the public demos' **`chirp_prov.py`, run unmodified on CPython** by `test/prov_oracle.py` | in 37 cases the library gives the same answer and saves the same config; the 12 documented stricter cases are refused with `bad-json` | — |
 
+## The public calls (`test/api`)
+
+`api_test.cpp` is compiled, not run: it takes every call and overload the reference lists, each with its exact type, and calls them as a sketch does with the optional arguments left out. Removing or changing one stops the suite.
+
 ## The sketch-facing layer, simulated (`test/sim`)
 
 `run_tests.sh` builds `src/Warblet.cpp`, `src/WarbletMqtt.cpp` and the LightByCommand example with:
@@ -53,10 +57,10 @@ The reference for the v0.31 input is:
 - a fake Warblet server, which answers a command check only as a `POST`;
 - a fake MQTT broker that knows only `mqtt.warbletiot.com`. Like Espressif's client on the board, it ends every failed attempt with a disconnect.
 
-`sim_test.cpp` (151 checks) covers:
+`sim_test.cpp` (153 checks) covers:
 - **setup:** waiting for settings; the setup page's probe and push; settings loaded after a restart; typed settings; a push that arrives while the board is busy (nothing is sent for 10 s after the probe, and a push over 256 bytes survives a 1.5 s request with the 2 KB buffer, but is lost at 256 bytes); a corrected network tried at once.
 - **messages:** the first message carrying the setup code; `led:on` reaching the sketch; `led:blink`, whose command function waits with `board.wait(200)`, starting no second command check; a key over USB, after which every signature verifies and nonces always increase; a key frame over the air; refusals named; numbers as text and as two bytes.
-- **waiting:** ten minutes of 401s (4 command checks, 1 console line); a 429 that waits for `Retry-After`; a rate 429 told from a budget 429; a 45-minute outage (a queued command arrives 50 s after the server is back); no command checks without a command function; a reply cut short at close, neither handed over nor counted as stored, and the request over at once; a report's first wait of 20 s after a 503, or a 429 with no `Retry-After`; a new setup over USB starting the command checks' wait again (refused after it, the next check comes a minute later and the refusal is said again, not ten minutes later and unsaid).
+- **waiting:** ten minutes of 401s (4 command checks, 1 console line); a 429 that waits for `Retry-After`; a rate 429 told from a budget 429; a 45-minute outage (a queued command arrives 50 s after the server is back); no command checks without a command function; a reply cut short at close, neither handed over nor counted as stored, and the request over at once; a report's first wait of 20 s after a 503, or a 429 with no `Retry-After`; a new setup over USB starting the command checks' wait again (refused after it, the next check comes a minute later and the refusal is said again, not ten minutes later and unsaid); and a refused (bad-json) push or a key that arrives over the air starting no wait afresh.
 - **`board.wait(60000)`:** a setup push arriving 5 s in is stored; a command queued before the wait arrives; the wait takes 60 s; a 2,000-character command arrives whole, and one past 8 KiB is dropped and said.
 - **stays connected (simulated):** a board reporting once a minute stores again after each fault ends: Wi-Fi gone for 3 and for 20 minutes (61 s), TLS refused or DNS failing (1 s), a server that never answers (1 s), junk on the USB port (1 s), a restart (1 s). Twenty minutes without Wi-Fi are 45 tries and 3 console lines, not two lines a try.
 - **not on an account:** after `202 {"status":"unclaimed"}`, nothing is sent for 20 minutes, Wi-Fi is off, the console says so once, the board keeps a fingerprint and never the code, a restart stays stopped, a Wi-Fi-only push does not count, and a new setup brings it back; a board with typed settings is told to change them in the sketch.
@@ -85,7 +89,7 @@ Each example is built and run as it is on the simulated board:
 
 ## The desk display (`test/cyd`)
 
-- `screen_test.cpp` (20 checks) runs `examples/DeskDisplay/screen.cpp`, unmodified, against `SPI.h` here, a fake bus with a screen chip behind it. As the one-USB board's ILI9341, an ST7789 that answers, and the two-USB ST7789 whose data line from the screen is not connected, it checks: the questions asked (in both clock shapes, at 4 MHz); the settings chosen for each answer (`0xE8`; `0xA8` with C0h `0x0C` in mode 3; the ST7789 when nothing answers, and the guess said); the console line; the pins the bus is started with, and that every transaction ends with the screen deselected; and the letters' pixels against MicroPython's own font.
+- `screen_test.cpp` (21 checks, built twice: as `screen.h` ships, and with its `INVERT` on) runs `examples/DeskDisplay/screen.cpp`, unmodified, against `SPI.h` here, a fake bus with a screen chip behind it. As the one-USB board's ILI9341, an ST7789 that answers, and the two-USB ST7789 whose data line from the screen is not connected, it checks: the questions asked (in both clock shapes, at 4 MHz); the settings chosen for each answer (`0xE8`; `0xA8` with C0h `0x0C` in mode 3; the ST7789 when nothing answers, and the guess said); the console line; the pins the bus is started with; that the screen is selected only inside a bus transaction and every byte goes inside one; that the colours follow `INVERT` on both chips; and the letters' pixels against MicroPython's own font.
 - `desk_display_test.cpp` (56 checks) runs the sketch on the simulated board with `fake_screen.cpp`, which keeps each line of text on the screen. It covers: not set up; the demo named in the announce; the strip from Joining Wi-Fi to Connected; the waiting text with the id, drawn once as the sketch starts; messages at each size, with letters outside plain English, and with a newline or a tab between words; one "seen" per message, and a tap while offline sent later; each message sent said on the console with the free memory; one disk line per computer, and a fourth replacing the oldest; Clear; a check every 5 s and a report every 30 s; 401, 429 and 403 (refusals), 503 (a fault: no answer) and no answer on the strip; the self-restart; the not-on-an-account screen and stop; a setup push as a new start (each restart boots a fresh copy of the sketch, so the first setup, the self-restart and a setup after the stop each start afresh, the last with a hello under the new id), and a Wi-Fi-only push that keeps the message; and that the routine and decoder are the MicroPython desk display's, byte for byte.
 - `screen.h`'s `CHIP` is checked at build time: the suite builds it with `""`, `ILI9341` and `ST7789`, and must fail to build with `ST7798` or `ili9341`.
 - 14 planted faults are each caught: the words on the console, a second seen, the id left on screen, no self-restart, the 10 s pace, no demo slug, a 401 shown as Connected, one row per disk line, the strip one letter wider, the ST7789 turned like the ILI9341, the panel read at 40 MHz, the ILI9341 as the fallback, no C0h, the letters upside down.
@@ -145,7 +149,11 @@ Each was reverted afterwards, and the suite passed again.
 | v0.1.1: `network(i)` handing out a repeated network | 2 `prov` checks |
 | v0.1.1: `exchange()` waiting out its 20 s after the connection closed | 1 simulation check |
 | v0.1.1: `screen.cpp` releasing the bus before deselecting the screen, or its data pins swapped | 1 screen check each |
-| v0.1.1, NOT caught: `screen.h`'s `INVERT` ignored | none: the screen checks build only with `INVERT` off |
+| v0.1.1: `screen.h`'s `INVERT` ignored | 2 screen checks in the `INVERT` build |
+| v0.1.1 review: a refused (bad-json) push resetting the command checks' back-off | 1 simulation check |
+| v0.1.1 review: a key over the air resetting every back-off | 1 simulation check |
+| v0.1.1 review: the screen selected before its bus transaction begins | 1 screen check in each build |
+| v0.1.1 review: `sendNumber(long)` removed | the public-call build (`test/api`) |
 | v0.1.1, NOT caught: the board setting its clock from any time, 1970 included | none: the PC build of the board layer cannot set the clock |
 
 `demo-c` fails only once under the older rule. It compares the demo's HMAC over the library's own input bytes, so it cannot judge the shape.
