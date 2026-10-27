@@ -28,6 +28,8 @@ Every call the library offers, what each one does, what goes on the wire, and th
 
 `tag` is optional on every send. It is 1 to 32 letters, digits, `_`, `.` or `-`, such as `button` or `heartbeat`; routines can match on it.
 
+A sketch uses the `Warblet` class above. Everything in the `warblet` namespace that this page does not document is internal to the library and may change in a patch release.
+
 **What a send returns.** Over HTTPS, `true` only when Warblet answered that it stored the message on this device. Over MQTT, `true` when the broker acknowledged it. `false` when it was not sent or not stored, with a `warblet:` line saying why the first time.
 
 **After a refusal or no answer** the board holds its messages for a while and a send returns `false` at once:
