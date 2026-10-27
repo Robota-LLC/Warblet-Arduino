@@ -35,9 +35,7 @@ struct Settings {
   // Complete enough to report with: a network, a credential and an id.
   bool ready() const;
   // The networks to try, first the top-level one, then the list, without
-  // repeating a name. Returns how many were written.
-  size_t networks(Network* out, size_t max) const;
-  // The same order, one at a time and without copying: the i-th network
+  // repeating a name, one at a time and without copying: the i-th network
   // (from 0). Returns false past the end.
   bool network(size_t i, const char** ssidOut, const char** passOut) const;
 };

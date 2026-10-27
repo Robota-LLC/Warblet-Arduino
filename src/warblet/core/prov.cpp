@@ -72,23 +72,6 @@ void Settings::clear() { memset(this, 0, sizeof *this); }
 
 bool Settings::ready() const { return ssid[0] && credential[0] && hwId[0]; }
 
-size_t Settings::networks(Network* out, size_t max) const {
-  size_t n = 0;
-  if (ssid[0] && n < max) {
-    memcpy(out[n].ssid, ssid, sizeof ssid);
-    memcpy(out[n].pass, pass, sizeof pass);
-    n++;
-  }
-  for (size_t i = 0; i < apsCount && n < max; i++) {
-    bool seen = false;
-    for (size_t j = 0; j < n; j++) {
-      if (strcmp(out[j].ssid, aps[i].ssid) == 0) seen = true;
-    }
-    if (!seen) out[n++] = aps[i];
-  }
-  return n;
-}
-
 bool Settings::network(size_t i, const char** ssidOut, const char** passOut) const {
   size_t seen = 0;
   if (ssid[0]) {

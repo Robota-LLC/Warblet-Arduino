@@ -48,7 +48,6 @@ class NonceClock {
   static const uint64_t kClockSaneMs = 1735689600000ULL;
   // Returns 0 when nowMs is below kClockSaneMs (no clock: send no nonce).
   uint64_t next(uint64_t nowMs);
-  uint64_t last() const { return last_; }
 
  private:
   uint64_t last_ = 0;
@@ -91,7 +90,7 @@ size_t httpPollHead(const HttpPoll& r, char* out, size_t cap);
 // ---- HTTP responses ---------------------------------------------------------
 
 // Reads one HTTP/1.1 response fed in pieces: status, Content-Length or
-// chunked body, X-Chirp-Down and Retry-After. The body goes into the caller's
+// chunked body, Retry-After and X-Chirp-Budget. The body goes into the caller's
 // buffer; a body longer than that buffer is reported as tooLong(), never
 // truncated silently. Interim 1xx answers are skipped. A body with neither a
 // length nor chunking is never complete: a reply cut short could not be told
@@ -107,8 +106,6 @@ class HttpResponse {
   bool tooLong() const { return tooLong_; }
   int status() const { return status_; }
   size_t bodyLen() const { return bodyLen_; }
-  // The X-Chirp-Down header value ("data", "key"), or "" when absent.
-  const char* downHeader() const { return down_; }
   // Retry-After in seconds (the delay form), or 0 when absent or a date.
   unsigned long retryAfter() const { return retryAfter_; }
   // True when X-Chirp-Budget came: on a 429 it is the day's storage budget,
@@ -131,7 +128,6 @@ class HttpResponse {
   size_t bodyLen_;   // bytes kept
   size_t bodySeen_;  // bytes received, kept or not
   bool tooLong_;
-  char down_[8];
   unsigned long retryAfter_;
   bool budget_;
 };

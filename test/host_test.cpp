@@ -598,7 +598,7 @@ void testWire() {
           "Content-Length: 6\r\n\r\nled:on",
           sizeof bodyBuf, step, rsp, bodyBuf);
     check(rsp->complete() && rsp->status() == 200 && rsp->bodyLen() == 6 &&
-              memcmp(bodyBuf, "led:on", 6) == 0 && strcmp(rsp->downHeader(), "data") == 0,
+              memcmp(bodyBuf, "led:on", 6) == 0,
           "200 with Content-Length, fed in pieces");
     delete rsp;
   }
@@ -608,8 +608,7 @@ void testWire() {
   parse("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nx-chirp-down: key\r\n\r\n"
         "4\r\nCHIR\r\n6;ext=1\r\nPKEY1 \r\n0\r\n\r\n",
         sizeof bodyBuf, 2, rsp, bodyBuf);
-  check(rsp->complete() && rsp->bodyLen() == 10 && memcmp(bodyBuf, "CHIRPKEY1 ", 10) == 0 &&
-            strcmp(rsp->downHeader(), "key") == 0,
+  check(rsp->complete() && rsp->bodyLen() == 10 && memcmp(bodyBuf, "CHIRPKEY1 ", 10) == 0,
         "chunked body, lowercase header names");
   delete rsp;
   parse("HTTP/1.1 202 Accepted\r\nX-Chirp-Budget: 1000\r\n\r\nstored", sizeof bodyBuf, 5, rsp, bodyBuf);
@@ -623,7 +622,7 @@ void testWire() {
   delete rsp;
   parse("HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 200 OK\r\nX-Chirp-Down: data\r\nContent-Length: 6\r\n\r\nled:on",
         sizeof bodyBuf, 3, rsp, bodyBuf);
-  check(rsp->complete() && rsp->status() == 200 && rsp->bodyLen() == 6 && strcmp(rsp->downHeader(), "data") == 0,
+  check(rsp->complete() && rsp->status() == 200 && rsp->bodyLen() == 6,
         "100 Continue is skipped and the real answer read");
   delete rsp;
   parse("HTTP/1.1 429 Too Many Requests\r\nRetry-After: 120\r\nContent-Length: 0\r\n\r\n", sizeof bodyBuf, 4, rsp,
@@ -839,23 +838,27 @@ void testProv() {
   expect("{\"ssid\":\"old\",\"pass\":\"p\",\"aps\":[{\"ssid\":\"old\",\"pass\":\"p\"},{\"ssid\":\"van\",\"pass\":\"\"},"
          "{\"ssid\":\"phone\"}],\"token\":\"T\",\"hwid\":\"h\"}",
          ProvResult::Ok, "a list of networks");
-  Network nets[kMaxNetworks + 1];
-  size_t nn = merged.networks(nets, kMaxNetworks + 1);
-  check(nn == 3 && strcmp(nets[0].ssid, "old") == 0 && strcmp(nets[1].ssid, "van") == 0 &&
-            strcmp(nets[2].ssid, "phone") == 0 && nets[2].pass[0] == '\0',
+  // The networks the board tries, in order, as network(i) hands them to it.
+  auto tried = [&]() {
+    std::vector<std::string> names, passes;
+    const char *ns = nullptr, *np = nullptr;
+    for (size_t i = 0; i <= kMaxNetworks && merged.network(i, &ns, &np); i++) {
+      names.push_back(ns);
+      passes.push_back(np);
+    }
+    return std::make_pair(names, passes);
+  };
+  auto nets = tried();
+  check(nets.first == std::vector<std::string>{"old", "van", "phone"} && nets.second[2].empty(),
         "...tried top-level first, then the list, without repeats");
   {
     const char *ns = nullptr, *np = nullptr;
-    bool same = true;
-    for (size_t i = 0; i < nn; i++) {
-      same = same && merged.network(i, &ns, &np) && strcmp(ns, nets[i].ssid) == 0 && strcmp(np, nets[i].pass) == 0;
-    }
-    check(same && !merged.network(nn, &ns, &np), "network(i) gives the same order without copying");
+    check(!merged.network(3, &ns, &np), "network(i) gives nothing past the end");
   }
   stored = merged;
   push("{\"ssid\":\"new\",\"pass\":\"n\"}", stored);
-  nn = merged.networks(nets, kMaxNetworks + 1);
-  check(!merged.hasAps && nn == 1 && strcmp(nets[0].ssid, "new") == 0,
+  nets = tried();
+  check(!merged.hasAps && nets.first == std::vector<std::string>{"new"},
         "a single-ssid push replaces the whole network list");
   push("{\"token\":\"T2\"}", stored);
   check(merged.hasAps && merged.apsCount == 3, "a push without networks keeps the list");

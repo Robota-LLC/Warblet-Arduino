@@ -168,7 +168,6 @@ void HttpResponse::reset(uint8_t* body, size_t cap) {
   bodyLen_ = 0;
   bodySeen_ = 0;
   tooLong_ = false;
-  down_[0] = '\0';
   retryAfter_ = 0;
   budget_ = false;
 }
@@ -203,7 +202,6 @@ bool HttpResponse::line(const char* s, size_t n) {
           // An interim answer (100 Continue): the real one follows.
           contentLength_ = -1;
           chunked_ = false;
-          down_[0] = '\0';
           retryAfter_ = 0;
           budget_ = false;
           state_ = kStatus;
@@ -236,10 +234,6 @@ bool HttpResponse::line(const char* s, size_t n) {
       } else if (equalsNoCase(s, nameLen, "transfer-encoding")) {
         chunked_ = equalsNoCase(v, vlen, "chunked");
         if (!chunked_) return false;  // no other coding is expected from the platform
-      } else if (equalsNoCase(s, nameLen, "x-chirp-down")) {
-        size_t m = vlen < sizeof down_ - 1 ? vlen : sizeof down_ - 1;
-        memcpy(down_, v, m);
-        down_[m] = '\0';
       } else if (equalsNoCase(s, nameLen, "x-chirp-budget")) {
         budget_ = true;
       } else if (equalsNoCase(s, nameLen, "retry-after")) {
