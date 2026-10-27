@@ -59,9 +59,11 @@ fi
 "$OUT/host_test" test/vectors.txt test/prov_vectors.txt
 
 # The public calls (test/api): every call and overload the reference lists,
-# taken by its exact type. Removing or changing one stops the build here.
-"$CXX" -std=c++11 -Wall -Wextra -fsyntax-only -Itest/sim -Isrc test/api/api_test.cpp
-echo "ok    every public call and overload is there, with its type"
+# taken by its exact type and linked with the library. Removing or changing
+# one, or leaving one with no definition, stops the build here.
+"$CXX" -std=c++11 -Wall -Wextra -O1 -Itest/sim -Isrc -o "$OUT/api_test" test/api/api_test.cpp test/sim/fake_board.cpp   src/Warblet.cpp src/WarbletMqtt.cpp src/warblet/core/sha256.cpp src/warblet/core/text.cpp src/warblet/core/sign.cpp   src/warblet/core/wire.cpp src/warblet/core/json.cpp src/warblet/core/prov.cpp
+"$OUT/api_test"
+echo "ok    every public call and overload is there, with its type and its definition"
 
 # The sketch-facing layer, run on the PC against stand-in Arduino headers and a
 # fake server (test/sim). This is a logic check, not a board compile.

@@ -1,8 +1,9 @@
 // The library's public calls, as Warblet.h and docs/REFERENCE.md list them.
-// Compiled only (run_tests.sh builds it with -fsyntax-only): every call,
-// every overload and every name a sketch may use is taken here with its
-// exact type, so removing or changing one stops the suite. Adding a call
-// does not; add it here when the reference lists it.
+// Built and linked with the library (run_tests.sh), never run past main():
+// every call, every overload and every name a sketch may use is taken here
+// with its exact type, and called as a sketch calls it, so removing or
+// changing one, or leaving one declared with no definition, stops the
+// suite. Adding a call does not; add it here when the reference lists it.
 #include "Warblet.h"
 
 namespace {
@@ -85,4 +86,11 @@ void sketch() {
   (void)now;
   (void)status;
   (void)id;
+}
+
+// Linked, so each call above must have its definition; sketch() itself is
+// never run (it would need a board).
+int main(int argc, char**) {
+  if (argc > 1000) sketch();
+  return 0;
 }
