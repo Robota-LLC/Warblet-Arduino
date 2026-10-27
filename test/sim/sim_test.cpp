@@ -957,19 +957,30 @@ int main() {
   }
 
   // 12k2. Only a stored push starts the waits afresh. A push the board refuses
-  // (bad-json) resets nothing: the checks stay as far apart as the refusals
-  // had made them, and their refusal is not said again.
-  {
+  // (bad-json), or a good one it could not store, resets nothing: a report
+  // held before it stays held, the next refused report waits twice as long,
+  // and the checks stay as far apart as the refusals had made them, their
+  // refusal not said again.
+  for (int storeFails = 0; storeFails < 2; storeFails++) {
     std::string storedBefore = sim.stored;
     sim.restarts.clear();
     sim.server = [&](const SimRequest&) { return answer(401, "Unauthorized"); };
     Warblet w;
     w.begin();
     w.onCommand(recordCommand);
+    w.wait(15000);
+    w.sendNumber(1);  // refused: messages wait a minute
     for (int i = 0; i < 12000; i++) { w.loop(); delay(100); }  // twenty minutes: the checks are ten apart now
+    w.sendNumber(2);  // refused again: two minutes
     Serial.out.clear();
+    sim.storeFails = storeFails == 1;
+    Serial.type(storeFails ? std::string("CHIRP+ {\"key\":\"") + kKey2 + "\"}\r\n" : std::string("CHIRP+ {\"ssid\":}\r\n"));
+    w.wait(1000);
+    sim.storeFails = false;
     size_t at = sim.requests.size();
-    Serial.type("CHIRP+ {\"ssid\":}\r\n");
+    bool held = !w.sendNumber(3);
+    int uplinks = 0;
+    for (size_t i = at; i < sim.requests.size(); i++) uplinks += isUplink(sim.requests[i]);
     for (int i = 0; i < 15000; i++) { w.loop(); delay(100); }  // twenty-five minutes
     std::vector<unsigned long> checks;
     for (size_t i = at; i < sim.requests.size(); i++) {
@@ -977,8 +988,21 @@ int main() {
     }
     bool apart = checks.size() >= 2;
     for (size_t i = 1; i < checks.size(); i++) apart = apart && checks[i] - checks[i - 1] >= 590000;
-    check(said("CHIRP= err bad-json") && apart && occurrences("command check refused") == 0,
-          "a refused push resets nothing: the checks stay ten minutes apart, and the refusal is not said again");
+    w.sendNumber(4);  // refused: the wait doubles to four minutes, unless the push reset it
+    at = sim.requests.size();
+    unsigned long refusedAt = millis(), next = 0;
+    for (int i = 0; i < 300 && next == 0; i++) {
+      w.wait(1000);
+      w.sendNumber(5);
+      for (size_t k = at; k < sim.requests.size() && next == 0; k++) {
+        if (isUplink(sim.requests[k])) next = sim.requests[k].at - refusedAt;
+      }
+    }
+    std::string what = storeFails ? "a push that could not be stored" : "a refused (bad-json) push";
+    check(said(storeFails ? "CHIRP= err store-failed" : "CHIRP= err bad-json") && held && uplinks == 0 && apart &&
+              occurrences("command check refused") == 0 && next >= 239000,
+          what + " resets nothing: a held report stays held, the next refused one waits 4 minutes, the checks stay "
+                 "ten minutes apart, and their refusal is not said again");
     sim.stored = storedBefore;
   }
 
