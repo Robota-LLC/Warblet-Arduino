@@ -33,6 +33,7 @@ const Chip& FALLBACK = ST7789;
 
 const int PRESS = 400;  // how hard a touch must be (the touch chip's pressure reading)
 
+const int SCREEN_CLOCK = 14, SCREEN_TO_CHIP = 13, SCREEN_FROM_CHIP = 12;
 const int SCREEN_DC = 2, SCREEN_CS = 15, SCREEN_LIGHT = 21;
 const int TOUCH_PEN = 36, TOUCH_CS = 33, TOUCH_CLOCK = 25, TOUCH_TO_CHIP = 32, TOUCH_FROM_CHIP = 39;
 
@@ -266,7 +267,7 @@ const char* start() {
   digitalWrite(TOUCH_CLOCK, LOW);
   pinMode(TOUCH_TO_CHIP, OUTPUT);
   pinMode(TOUCH_FROM_CHIP, INPUT);
-  bus.begin(14, 12, 13, -1);  // clock, from the screen, to the screen
+  bus.begin(SCREEN_CLOCK, SCREEN_FROM_CHIP, SCREEN_TO_CHIP, -1);  // -1: SCREEN_CS is set by hand
 
   const Chip* chip = nullptr;
   uint8_t answer[6];
