@@ -11,6 +11,7 @@
 
 std::vector<SimText> simScreen;
 std::vector<std::string> simStrip;  // every status strip drawn, in order
+std::vector<std::string> simDrawn;  // every text drawn, in order
 bool simTouch = false;
 std::string simStartLine = "screen: ILI9341 (simulated)";
 
@@ -41,6 +42,7 @@ void text(int x, int y, const char* words, int size, uint16_t colour, uint16_t b
   if (shown.empty()) return;
   fill(x, y, (int)shown.size() * 8 * size, 8 * size, background);
   simScreen.push_back(SimText{x, y, size, shown, colour});
+  simDrawn.push_back(shown);
   if (y == 1 && (simStrip.empty() || simStrip.back() != shown)) simStrip.push_back(shown);
 }
 

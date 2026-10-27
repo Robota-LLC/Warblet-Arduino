@@ -71,6 +71,7 @@ const Boot boots[] = {{boot1::setup, boot1::loop}, {boot2::setup, boot2::loop}, 
 int booted = 0;             // which copy is running
 size_t restartsSeen = 0;    // sim.restarts already acted on
 bool rebootFailed = false;  // more restarts than copies
+size_t drawnAtBoot = 0;     // simDrawn's length when the running copy started
 
 // The board restarted: Wi-Fi goes down with it, and the next copy starts.
 void reboot() {
@@ -80,6 +81,7 @@ void reboot() {
     return;
   }
   booted++;
+  drawnAtBoot = simDrawn.size();
   boots[booted].setup();
 }
 
@@ -184,6 +186,10 @@ int main() {
   runFor(30000);
   check(booted == 1 && sim.restarts.size() == 1 && said("CHIRP= ok"),
         "set up: the push is stored and answered ok, then the board restarts into the new setup");
+  int waitingDraws = 0;
+  for (size_t i = drawnAtBoot; i < simDrawn.size(); i++) waitingDraws += simDrawn[i] == "Type a message for";
+  check(waitingDraws == 1, "set up: the waiting text is drawn once as the sketch starts, not twice (drawn " +
+                               std::to_string(waitingDraws) + " times)");
   std::string seq;
   for (auto& s : simStrip) seq += (seq.empty() ? "" : " > ") + s;
   check(seq.find("Not set up > Joining Wi-Fi > Reaching Warblet > Connected") == 0,
