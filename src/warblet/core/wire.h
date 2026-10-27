@@ -102,8 +102,6 @@ class HttpResponse {
   void reset(uint8_t* body, size_t cap);
   // Feed received bytes. Returns false once the response is malformed.
   bool feed(const uint8_t* data, size_t n);
-  // Call when the connection closed. Returns true if the response is whole.
-  bool finishAtClose();
   bool complete() const { return state_ == kDone; }
   bool malformed() const { return state_ == kBad; }
   bool tooLong() const { return tooLong_; }

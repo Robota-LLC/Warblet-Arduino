@@ -317,12 +317,6 @@ bool HttpResponse::feed(const uint8_t* data, size_t n) {
   return state_ != kBad;
 }
 
-bool HttpResponse::finishAtClose() {
-  // A body with neither a length nor chunking stays incomplete: a reply cut
-  // short at that point looks exactly like a whole one.
-  return state_ == kDone;
-}
-
 bool answerIsUnclaimed(const uint8_t* body, size_t len) {
   static const char kWord[] = "\"unclaimed\"";
   const size_t n = sizeof kWord - 1;

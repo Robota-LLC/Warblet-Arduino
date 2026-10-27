@@ -673,10 +673,9 @@ int Warblet::exchange(size_t headLen, const uint8_t* body, size_t bodyLen, uint8
       if (n > 0) response_.feed(io_, (size_t)n);
       continue;
     }
-    if (!client.connected()) {
-      response_.finishAtClose();
-      break;
-    }
+    // Closed before the answer was whole: no answer (wire.h says why a body
+    // with neither a length nor chunking is never whole).
+    if (!client.connected()) break;
     delay(5);
   }
   client.stop();

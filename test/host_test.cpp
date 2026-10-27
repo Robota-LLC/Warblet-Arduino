@@ -613,8 +613,7 @@ void testWire() {
         "chunked body, lowercase header names");
   delete rsp;
   parse("HTTP/1.1 202 Accepted\r\nX-Chirp-Budget: 1000\r\n\r\nstored", sizeof bodyBuf, 5, rsp, bodyBuf);
-  check(!rsp->complete() && !rsp->finishAtClose(),
-        "no length and no chunking: never complete, since a cut-short reply looks the same");
+  check(!rsp->complete(), "no length and no chunking: never complete, since a cut-short reply looks the same");
   delete rsp;
   parse("HTTP/1.1 2000 OK\r\nContent-Length: 0\r\n\r\n", sizeof bodyBuf, 1, rsp, bodyBuf);
   check(rsp->malformed(), "HTTP/1.1 2000 is malformed, not 200");
@@ -674,7 +673,7 @@ void testWire() {
   check(rsp->complete() && rsp->tooLong() && rsp->bodyLen() == 4, "a body past the buffer is reported, not hidden");
   delete rsp;
   parse("HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\n0123", sizeof bodyBuf, 1, rsp, bodyBuf);
-  check(!rsp->complete() && !rsp->finishAtClose(), "a body cut short is not complete");
+  check(!rsp->complete(), "a body cut short is not complete");
   delete rsp;
   parse("SSH-2.0-nope\r\n\r\n", sizeof bodyBuf, 1, rsp, bodyBuf);
   check(rsp->malformed(), "not HTTP is malformed");
