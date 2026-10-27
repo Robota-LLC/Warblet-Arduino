@@ -58,6 +58,11 @@ fi
   "$OUT/sha256.o" "$OUT/text.o" "$OUT/sign.o" "$OUT/wire.o" "$OUT/json.o" "$OUT/prov.o" $DEMO
 "$OUT/host_test" test/vectors.txt test/prov_vectors.txt
 
+# The public calls (test/api): every call and overload the reference lists,
+# taken by its exact type. Removing or changing one stops the build here.
+"$CXX" -std=c++11 -Wall -Wextra -fsyntax-only -Itest/sim -Isrc test/api/api_test.cpp
+echo "ok    every public call and overload is there, with its type"
+
 # The sketch-facing layer, run on the PC against stand-in Arduino headers and a
 # fake server (test/sim). This is a logic check, not a board compile.
 "$CXX" -std=c++11 -Wall -Wextra -O1 -Itest/sim -Isrc -o "$OUT/sim_test" \
