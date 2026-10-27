@@ -49,8 +49,6 @@ class Out {
   bool ok_ = true;
 };
 
-bool present(const char* s) { return s != nullptr && s[0] != '\0'; }
-
 bool equalsNoCase(const char* a, size_t n, const char* b) {
   if (strlen(b) != n) return false;
   for (size_t i = 0; i < n; i++) {

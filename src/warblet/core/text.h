@@ -27,4 +27,8 @@ void toHex(const uint8_t* bytes, size_t n, char* out);
 // out needs room for 21 characters.
 size_t toDecimal(uint64_t v, char out[21]);
 
+// True for a string that is there and not empty: an optional field (a tag,
+// a token, a signature) that was given.
+inline bool present(const char* s) { return s != nullptr && s[0] != 0; }
+
 }  // namespace warblet

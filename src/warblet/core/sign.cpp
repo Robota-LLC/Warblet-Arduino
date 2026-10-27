@@ -9,8 +9,6 @@ namespace warblet {
 
 namespace {
 
-bool hasTag(const char* tag) { return tag != nullptr && tag[0] != '\0'; }
-
 // The nonce line and the tag line, in contract order, BOTH ALWAYS PRESENT
 // (v0.31): "<nonce>\n" with an empty nonce when there is none, then
 // "tag=<tag>\n" with an empty tag when there is none. This is the only place
@@ -22,7 +20,7 @@ void feedPrefix(HmacSha256& h, uint64_t nonce, const char* tag) {
     h.update(digits, n);
   }
   h.update("\ntag=", 5);
-  if (hasTag(tag)) h.update(tag, strlen(tag));
+  if (present(tag)) h.update(tag, strlen(tag));
   h.update("\n", 1);
 }
 
@@ -32,7 +30,7 @@ size_t signedInput(uint64_t nonce, const char* tag, const uint8_t* body, size_t 
                    uint8_t* out, size_t cap) {
   char digits[21];
   size_t nlen = nonce != 0 ? toDecimal(nonce, digits) : 0;
-  size_t tlen = hasTag(tag) ? strlen(tag) : 0;
+  size_t tlen = present(tag) ? strlen(tag) : 0;
   size_t need = nlen + 5 + tlen + 1 + len;  // <nonce> "\ntag=" <tag> "\n" <body>
   if (out == nullptr || need > cap) return need;
   size_t at = 0;
