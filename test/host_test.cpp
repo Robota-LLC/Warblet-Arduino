@@ -795,6 +795,14 @@ void testProv() {
   expect(seventeen.c_str(), ProvResult::BadJson, "17 two-byte characters (34 bytes) do not fit an ssid");
   expect("{\"ssid\":\"s\",\"token\":\"T\",\"hwid\":\"h\",\"ssid\":\"\\u0000\"}", ProvResult::BadJson,
          "a NUL inside a string");
+  {
+    // A raw NUL byte, as junk on the USB line could bring, is not JSON either:
+    // the scanner refuses it, so jsonString() never meets one.
+    static const char raw[] = "{\"ssid\":\"a\0b\",\"token\":\"T\",\"hwid\":\"h\"}";
+    Settings none;
+    none.clear();
+    check(applyPush(raw, sizeof raw - 1, none, merged) == ProvResult::BadJson, "a raw NUL byte inside a string");
+  }
 
   // Control characters in any pushed string.
   expect("{\"ssid\":\"s\",\"token\":\"T\",\"hwid\":\"h\",\"host\":\"evil.example\\r\\nX-Injected: 1\"}",

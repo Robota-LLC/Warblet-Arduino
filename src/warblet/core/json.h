@@ -34,7 +34,7 @@ class JsonObject {
 
 // Decode a kString value (escapes, \u including surrogate pairs, to UTF-8)
 // into out with a NUL. Returns the length, or -1 if it does not fit, or it
-// holds a NUL character.
+// holds a NUL character (\u0000: JsonObject has already refused a raw one).
 int jsonString(const JsonValue& v, char* out, size_t cap);
 
 // True when key (a kString) is exactly name, escapes not allowed.

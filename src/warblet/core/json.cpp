@@ -274,7 +274,6 @@ int jsonString(const JsonValue& v, char* out, size_t cap) {
       default: out[n++] = e; break;  // \" \\ \/
     }
   }
-  if (memchr(out, '\0', n) != nullptr) return -1;
   out[n] = '\0';
   return (int)n;
 }
