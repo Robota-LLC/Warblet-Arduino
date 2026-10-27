@@ -299,8 +299,12 @@ bool Warblet::serviceSetup() {
         joinFailSaid_ = false;  // new networks: say the first round again
         waitingSaid_ = false;
         nextPoll_ = millis();
-        holdMs_ = 0;  // reports refused with the old settings wait no longer
+        // What was refused with the old settings says nothing about these:
+        // reports, command checks and MQTT sessions start their waits afresh.
+        holdMs_ = 0;
         reports_.reset();
+        commandChecks_.reset();
+        mqttRefusals_.reset();
         changed = true;
         if (stopped_) {
           char mark[33], fp[17];

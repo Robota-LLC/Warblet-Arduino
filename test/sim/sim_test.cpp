@@ -910,6 +910,38 @@ int main() {
     check(w.sendNumber(2), "...and the next whole answer is");
   }
 
+  // 12k. A new setup over USB starts the command checks' wait again, as it
+  // does the reports' (reference: "So does a new setup over USB ... Command
+  // checks wait by the same rules"). Here a signing key is pushed (the id and
+  // the token stay, so the board does not restart) while Warblet still
+  // refuses the checks: the first goes at once, the next a minute later,
+  // and the refusal is said again; not ten minutes later, unsaid.
+  {
+    std::string storedBefore = sim.stored;
+    sim.restarts.clear();
+    sim.server = [&](const SimRequest&) { return answer(401, "Unauthorized"); };
+    Warblet w;
+    w.begin();
+    w.onCommand(recordCommand);
+    for (int i = 0; i < 12000; i++) { w.loop(); delay(100); }  // twenty minutes: the checks are ten apart now
+    Serial.out.clear();
+    size_t at = sim.requests.size();
+    unsigned long pushedAt = millis();
+    Serial.type(std::string("CHIRP+ {\"key\":\"") + kKey2 + "\"}\r\n");
+    for (int i = 0; i < 1500; i++) { w.loop(); delay(100); }  // two and a half minutes
+    std::vector<unsigned long> checks;
+    for (size_t i = at; i < sim.requests.size(); i++) {
+      if (isPoll(sim.requests[i])) checks.push_back(sim.requests[i].at - pushedAt);
+    }
+    check(said("CHIRP= ok") && sim.restarts.empty(), "a key push: stored, and no restart");
+    check(checks.size() >= 2 && checks[0] <= 1000 && checks[1] - checks[0] >= 59000 && checks[1] - checks[0] <= 61000,
+          "after a new setup a command check still refused waits a minute again, not the old ten");
+    check(occurrences("command check refused") == 1, "...and the refusal is said again");
+    printf("      after a new setup, command checks at +%lu ms and +%lu ms\n", checks.empty() ? 0UL : checks[0],
+           checks.size() < 2 ? 0UL : checks[1]);
+    sim.stored = storedBefore;  // the next scenarios expect the earlier key
+  }
+
   // 13. board.wait(): a setup push and a command both arrive during a long
   // wait and are handled before it returns.
   {
@@ -1228,6 +1260,23 @@ int main() {
     check(m.connected() && broker.pass == "TOKEN-PUSHED-DURING-BACKOFF" && millis() - pushedAt <= 5000,
           "MQTT: new credentials pushed during a back-off start a session at once");
     printf("      MQTT: session up %lu ms after a push made during the back-off\n", millis() - pushedAt);
+
+    // A new setup starts the session's wait again too, as over HTTPS: the
+    // same token pushed while the broker still refuses it is tried at once,
+    // then a minute later, not after the ten minutes the refusals had reached.
+    broker.refuse = true;
+    warblet::board::simDropSession();
+    for (int i = 0; i < 1200; i++) m.wait(1000);  // twenty minutes of refusals
+    int startsAtPush = broker.starts;
+    Serial.type("CHIRP+ {\"token\":\"TOKEN-PUSHED-DURING-BACKOFF\"}\r\n");
+    for (int i = 0; i < 90; i++) m.wait(1000);
+    check(broker.starts - startsAtPush == 2,
+          "MQTT: after a new setup a session still refused is tried again a minute later, not after the old ten");
+    printf("      MQTT: %d sessions in the 90 s after a new setup, the broker still refusing\n",
+           broker.starts - startsAtPush);
+    broker.refuse = false;
+    for (int i = 0; i < 700 && !m.connected(); i++) m.wait(1000);
+    check(m.connected(), "MQTT: ...and once the broker takes the token, the session is back");
 
     // A wrong host pushed over USB: no session, said; the right one: back.
     Serial.out.clear();
