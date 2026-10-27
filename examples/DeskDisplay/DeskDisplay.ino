@@ -6,9 +6,9 @@
 // your computers' disks are, and each computer keeps its own line.
 //
 // Choose the board "ESP32-2432S028R CYD" and upload. Then set it up over USB
-// at warbletiot.com/flash; the screen says what to do. Paste decoder.star
-// into the device's spec, and add a Message box and a "Clear" button (text
-// "clear") to its dashboard. screen.h has the settings for a wrong picture.
+// at warbletiot.com/flash; the screen says what to do. The setup page gives
+// the device this demo's decoder, its Message box and Clear button, and the
+// disk routine. screen.h has the settings for a wrong picture.
 #include <WiFi.h>
 #include <Warblet.h>
 #include <ctype.h>
