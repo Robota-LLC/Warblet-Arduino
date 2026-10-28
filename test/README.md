@@ -165,8 +165,8 @@ Each was reverted afterwards, and the suite passed again.
 | v0.1.1 bug hunt: a setup code no longer starting a new device (the key kept) | 2 `prov` checks |
 | v0.1.1 bug hunt: a new id no longer starting a new device | 2 `prov` checks |
 | v0.1.1 bug hunt: ids compared with their letter case | 1 `prov` check, 1 simulation check |
-| v0.1.1 bug hunt: a key pushed with a new device's setup cleared too | 7 host checks (`prov` 6, `prov-demo` 1); 6 simulation checks (stored settings load without their key) |
-| v0.1.1 bug hunt: typed settings using the stored key for any device id, or never | 1 simulation check, or 2 |
+| v0.1.1 bug hunt: a key pushed with a new device's setup cleared too | 8 host checks (`prov` 7, `prov-demo` 1); 7 simulation checks (stored settings load without their key) |
+| v0.1.1 bug hunt: typed settings using the stored key for any device id, or never | 1 simulation check, or 3 |
 | v0.1.1 bug hunt: the host check refusing this transport's own name, or matching it with case | 1 `wire` check each |
 | v0.1.1 bug hunt: the left-out host not said at start | 1 simulation check |
 | v0.1.1 bug hunt: an open MQTT session not counting as an answer for `restartWhenStuck()` | 3 simulation checks |
