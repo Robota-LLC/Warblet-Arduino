@@ -151,7 +151,7 @@ bool answerIsUnclaimed(const uint8_t* body, size_t len);
 // ---- asking again -----------------------------------------------------------
 
 // How long to wait before the next request after an answer. A success goes
-// back to the normal pace. A refusal (401, 403, 404) waits a minute and
+// back to the normal pace. A refusal (any 4xx but 429) waits a minute and
 // doubles, and a 429 doubles from the normal pace, up to maxMs: a refusal does
 // not fix itself soon. No answer, or a server error, doubles from the normal
 // pace up to unansweredMaxMs, so a board is back soon after an outage.

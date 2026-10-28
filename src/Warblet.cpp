@@ -527,7 +527,8 @@ bool Warblet::post(const uint8_t* bytes, size_t length, const char* tag) {
   // A refusal or no answer will not change on the next pass of loop(): reports
   // wait, longer while it lasts (as command checks do), so a sketch that says
   // hello until it is stored does not flood Warblet. Said once, not each time.
-  bool hold = status < 0 || status == 401 || status == 403 || status == 404 || status == 429 || status >= 500;
+  // Every answer but a 2xx: a 400 or a 423 holds them as a 401 does.
+  bool hold = status < 200 || status >= 300;
   if (hold) {
     reports_.after(status, response_.retryAfter());
     holdSince_ = millis();

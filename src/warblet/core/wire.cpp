@@ -336,8 +336,9 @@ unsigned long Backoff::after(int status, unsigned long retryAfterS) {
   bool wasFailing = failing_;
   if (ok) {
     wait_ = base_;
-  } else if (status == 401 || status == 403 || status == 404) {
-    // A credential or an id the platform refuses: it will not fix itself soon.
+  } else if (status >= 400 && status < 500 && status != 429) {
+    // A refusal (a credential or an id, a request it cannot take, a locked
+    // account): it will not fix itself soon.
     unsigned long minute = 60000UL;
     wait_ = (!wasFailing || wait_ < minute) ? minute : wait_ * 2;
   } else {
