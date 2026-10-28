@@ -352,12 +352,16 @@ int main() {
       check(signedSince(at, kKey2, false), "typed settings: the same id with a new token keeps the key (the key rule)");
     }
     {
-      Warblet t;  // the same id in other letter case: the same device (CHIRP-PROV v1.7)
-      t.begin("lab", "pw", "SIM-Board-1", "TOKEN-TYPED");
+      // Device ids are compared byte for byte, as the core looks a device up:
+      // SIM-BOARD-1 can be another device than sim-board-1, so it does not
+      // use the key stored for sim-board-1.
+      Warblet t;
+      t.begin("lab", "pw", "SIM-BOARD-1", "TOKEN-UPPER");
       size_t at = sim.requests.size();
       t.wait(3000);
-      t.sendNumber(1);
-      check(signedSince(at, kKey2, false), "typed settings: the same id in other letter case keeps the key");
+      bool sent = t.sendNumber(1);
+      check(sent && sim.requests.size() > at && sim.requests.back().header("X-Chirp-Signature").empty(),
+            "typed settings: SIM-BOARD-1 does not use the key stored for sim-board-1");
     }
     {
       Warblet t;  // another device id: a new device, so not the stored key
