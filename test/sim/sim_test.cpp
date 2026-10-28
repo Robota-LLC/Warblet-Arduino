@@ -302,6 +302,76 @@ int main() {
   badKey.begin("lab", "pw", "sim-board-1", "TOKEN", "short");
   check(said("the signing key should be the 44-character key"), "a bad typed key is refused and named");
 
+  // 9b. Typed settings and a key over the air: the key is "stored and used
+  // from then on" (reference), after a restart too, or the board, now at
+  // Signed, sends unsigned and is refused, and cannot collect the key again
+  // (a poll at Signed must be signed). By the key rule a different typed id
+  // is a new device and does not use it; a key typed into begin() wins.
+  {
+    std::string kept = sim.stored;
+    sim.stored.clear();
+    sim.refusedMark.clear();
+    bool giveKey = true;
+    sim.server = [&](const SimRequest& r) -> std::string {
+      if (isUplink(r)) return answer(202, "Accepted");
+      if (!giveKey) return answer(204, "No Content");
+      giveKey = false;
+      return answer(200, "OK", std::string("CHIRPKEY1 ") + kKey2 + "\n", "X-Chirp-Down: key\r\n");
+    };
+    Serial.out.clear();
+    {
+      Warblet t;
+      t.begin("lab", "pw", "sim-board-1", "TOKEN-TYPED");
+      t.onCommand(recordCommand);
+      t.wait(15000);  // the first command check brings the key
+    }
+    bool arrived = said("a signing key arrived over the air and was stored");
+    auto signedSince = [&](size_t at, const char* keyB64, bool poll) {
+      for (size_t i = at; i < sim.requests.size(); i++) {
+        if (isPoll(sim.requests[i]) == poll && signatureOk(sim.requests[i], keyB64)) return true;
+      }
+      return false;
+    };
+    {
+      Warblet t;  // the same sketch after a restart
+      t.begin("lab", "pw", "sim-board-1", "TOKEN-TYPED");
+      t.onCommand(recordCommand);
+      size_t at = sim.requests.size();
+      t.wait(3000);
+      t.sendNumber(1);
+      t.wait(15000);
+      check(arrived && signedSince(at, kKey2, false) && signedSince(at, kKey2, true),
+            "typed settings: a key that arrived over the air signs reports and command checks after a restart");
+    }
+    {
+      Warblet t;  // a new token typed for the same id: the key rule keeps the key
+      t.begin("lab", "pw", "sim-board-1", "TOKEN-TYPED-2");
+      size_t at = sim.requests.size();
+      t.wait(3000);
+      t.sendNumber(1);
+      check(signedSince(at, kKey2, false), "typed settings: the same id with a new token keeps the key (the key rule)");
+    }
+    {
+      Warblet t;  // another device id: a new device, so not the stored key
+      t.begin("lab", "pw", "sim-board-2", "TOKEN-OTHER");
+      size_t at = sim.requests.size();
+      t.wait(3000);
+      bool sent = t.sendNumber(1);
+      check(sent && sim.requests.size() > at && sim.requests.back().header("X-Chirp-Signature").empty(),
+            "typed settings: another device id does not use the key stored for the first");
+    }
+    {
+      Warblet t;  // a typed key is the one used
+      t.begin("lab", "pw", "sim-board-1", "TOKEN-TYPED", kKey1);
+      size_t at = sim.requests.size();
+      t.wait(3000);
+      t.sendNumber(1);
+      check(signedSince(at, kKey1, false), "typed settings: a key typed into begin() is the one used");
+    }
+    sim.stored = kept;
+    sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(202, "Accepted") : answer(204, "No Content"); };
+  }
+
   // 10. A setup push that arrives while the board is busy.
   // The page probes; for 10 s after the answer the board only listens.
   sim.server = [&](const SimRequest& r) {
