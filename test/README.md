@@ -154,27 +154,27 @@ Each was reverted afterwards, and the suite passed again.
 | v0.1.1: `exchange()` waiting out its 20 s after the connection closed | 1 simulation check |
 | v0.1.1: `screen.cpp` releasing the bus before deselecting the screen, or its data pins swapped | 1 screen check each |
 | v0.1.1: `screen.h`'s `INVERT` ignored | 2 screen checks in the `INVERT` build |
-| v0.1.1 review: a refused (bad-json) push resetting the command checks' back-off | 1 simulation check |
-| v0.1.1 review: a key over the air resetting every back-off | 1 simulation check |
-| v0.1.1 review: the screen selected before its bus transaction begins | 1 screen check in each build |
-| v0.1.1 review: `sendNumber(long)` removed | the public-call build (`test/api`) |
+| v0.1.1: a refused (bad-json) push resetting the command checks' back-off | 1 simulation check |
+| v0.1.1: a key over the air resetting every back-off | 1 simulation check |
+| v0.1.1: the screen selected before its bus transaction begins | 1 screen check in each build |
+| v0.1.1: `sendNumber(long)` removed | the public-call build (`test/api`) |
 | v0.1.1: the board setting its clock from any time, 1970 included | 1 board check |
-| v0.1.1 re-judge: `sendNumber(long)` declared, its definition gone | the public-call build, at link |
-| v0.1.1 re-judge: a refused push releasing the reports' hold and back-off | 1 simulation check |
-| v0.1.1 re-judge: a push that could not be stored resetting every wait | 1 simulation check |
-| v0.1.1 bug hunt: a setup code no longer starting a new device (the key kept) | 2 `prov` checks |
-| v0.1.1 bug hunt: a new id no longer starting a new device | 3 `prov` checks |
-| v0.1.1 bug hunt: ids compared ignoring letter case | 1 `prov` check, 1 simulation check |
-| v0.1.1 bug hunt: a key pushed with a new device's setup cleared too | 7 host checks (`prov` 6, `prov-demo` 1); 6 simulation checks (stored settings load without their key) |
-| v0.1.1 bug hunt: typed settings using the stored key for any device id, or never | 2 simulation checks each |
-| v0.1.1 bug hunt: the host check renaming this transport's own name, or matching it with case | 1 `wire` check each |
-| v0.1.1 bug hunt: Warblet's own host used again for another transport's name | 3 simulation checks (the host test stops at its build) |
-| v0.1.1 bug hunt: the board layer's MQTT host buffer back to 128 characters | 1 board check |
-| v0.1.1 bug hunt: the renamed host not said at start | 2 simulation checks |
-| v0.1.1 bug hunt: an open MQTT session not counting as an answer for `restartWhenStuck()` | 3 simulation checks |
-| v0.1.1 bug hunt: a 423 waiting as a 429 does, or a 400 report not held | 1 `wire` and 1 simulation check, or 1 simulation check |
-| v0.1.1 bug hunt: a 2,047-character settings record refused at load | 1 board check |
-| v0.1.1 bug hunt: DeskDisplay's oldest line found by its time, not its age | 1 desk display check |
+| v0.1.1: `sendNumber(long)` declared, its definition gone | the public-call build, at link |
+| v0.1.1: a refused push releasing the reports' hold and back-off | 1 simulation check |
+| v0.1.1: a push that could not be stored resetting every wait | 1 simulation check |
+| v0.1.1: a setup code no longer starting a new device (the key kept) | 2 `prov` checks |
+| v0.1.1: a new id no longer starting a new device | 3 `prov` checks |
+| v0.1.1: ids compared ignoring letter case | 1 `prov` check, 1 simulation check |
+| v0.1.1: a key pushed with a new device's setup cleared too | 7 host checks (`prov` 6, `prov-demo` 1); 6 simulation checks (stored settings load without their key) |
+| v0.1.1: typed settings using the stored key for any device id, or never | 2 simulation checks each |
+| v0.1.1: the host check renaming this transport's own name, or matching it with case | 1 `wire` check each |
+| v0.1.1: Warblet's own host used again for another transport's name | 3 simulation checks (the host test stops at its build) |
+| v0.1.1: the board layer's MQTT host buffer back to 128 characters | 1 board check |
+| v0.1.1: the renamed host not said at start | 2 simulation checks |
+| v0.1.1: an open MQTT session not counting as an answer for `restartWhenStuck()` | 3 simulation checks |
+| v0.1.1: a 423 waiting as a 429 does, or a 400 report not held | 1 `wire` and 1 simulation check, or 1 simulation check |
+| v0.1.1: a 2,047-character settings record refused at load | 1 board check |
+| v0.1.1: DeskDisplay's oldest line found by its time, not its age | 1 desk display check |
 | v0.1.1: typed settings using the stored key with another setup code for the same id, or not with the same code | 1 simulation check each |
 
 `demo-c` fails only once under the older rule. It compares the demo's HMAC over the library's own input bytes, so it cannot judge the shape.
