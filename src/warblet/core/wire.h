@@ -27,6 +27,18 @@ bool isClaimCode(const char* credential);
 // a host or a token would end up inside a request header.
 bool hasControlChar(const char* s);
 
+// Warblet's own hosts, one per transport (contract §Hosts).
+static const char* const kHttpsHost = "https.warbletiot.com";
+static const char* const kMqttHost = "mqtt.warbletiot.com";
+
+// The host to connect to: stored (an override for a self-hosted core), or
+// builtIn when none is stored. A device endpoint is named for its transport
+// (<transport>.<domain>), so a stored host whose first label names another
+// transport (https, http, mqtt, tcp, udp) was stored for that transport, by
+// an earlier demo or sketch, and builtIn is used instead. builtIn's own first
+// label is this transport. Returns one of the two pointers.
+const char* hostFor(const char* stored, const char* builtIn);
+
 // ---- MQTT -------------------------------------------------------------------
 
 // "chirp/{hwId}/up", or "chirp/{hwId}/up/{tag}" for a tagged message: exactly

@@ -86,6 +86,19 @@ bool isClaimCode(const char* credential) {
   return credential != nullptr && strncmp(credential, "CHIRP-", 6) == 0;
 }
 
+const char* hostFor(const char* stored, const char* builtIn) {
+  if (stored == nullptr || stored[0] == '\0') return builtIn;
+  const char* dot = strchr(stored, '.');
+  size_t label = dot ? (size_t)(dot - stored) : strlen(stored);
+  static const char* const kTransports[] = {"https", "http", "mqtt", "tcp", "udp"};
+  for (const char* t : kTransports) {
+    size_t n = strlen(t);
+    bool mine = strncmp(builtIn, t, n) == 0 && builtIn[n] == '.';
+    if (!mine && equalsNoCase(stored, label, t)) return builtIn;
+  }
+  return stored;
+}
+
 size_t topicUp(const char* hwId, const char* tag, char* out, size_t cap) {
   Out o(out, cap);
   o.add("chirp/").add(hwId).add("/up");

@@ -18,7 +18,6 @@ using namespace warblet;
 
 namespace {
 
-const char* const kDefaultHost = "https.warbletiot.com";  // contract §Hosts
 const uint16_t kPort = 443;
 const unsigned long kCommandCheckMs = 10000UL;  // how often to ask for commands
 const unsigned long kCommandCheckMinMs = 5000UL;  // the fastest a sketch may ask for
@@ -54,6 +53,17 @@ bool copyField(char* field, size_t cap, const char* value) {
   return true;
 }
 
+// A stored host for another transport is not used (contract §Hosts); say so,
+// so a board that reaches Warblet's own host instead is no mystery.
+void sayIfHostLeftOut(const Settings& s, const char* builtIn) {
+  if (s.host[0] == '\0' || hostFor(s.host, builtIn) == s.host) return;
+  Serial.print("warblet: the stored host ");
+  Serial.print(s.host);
+  Serial.print(" is for another transport, so ");
+  Serial.print(builtIn);
+  Serial.println(" is used");
+}
+
 }  // namespace
 
 Warblet::Warblet()
@@ -67,7 +77,7 @@ void Warblet::say(const char* text) {
   Serial.println(text);
 }
 
-const char* Warblet::host() const { return settings_.host[0] ? settings_.host : kDefaultHost; }
+const char* Warblet::host() const { return hostFor(settings_.host, kHttpsHost); }
 
 // For a while after answering the setup page's probe, the board does nothing
 // but listen on USB, so the push that follows is read as it arrives.
@@ -88,6 +98,7 @@ void Warblet::begin() {
   if (board::loadSettings(storeText, sizeof storeText, len) &&
       applyPush(storeText, len, scratch_, settings_) == ProvResult::Ok) {
     say("settings loaded from this board");
+    sayIfHostLeftOut(settings_, mqtt_ != nullptr ? kMqttHost : kHttpsHost);
   } else {
     settings_.clear();
   }
@@ -338,6 +349,7 @@ bool Warblet::serviceSetup() {
           board::restart();
         }
         say("settings saved; connecting with them");
+        sayIfHostLeftOut(settings_, mqtt_ != nullptr ? kMqttHost : kHttpsHost);
       }
     }
   }
