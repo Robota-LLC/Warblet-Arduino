@@ -111,6 +111,15 @@ int main() {
   }
 
   // ---- the MQTT session's configuration --------------------------------------
+  // The longest host the library hands over (warblet::kHostTextMax): a stored
+  // 128-character tcp. or udp. host takes MQTT's name, one character longer.
+  {
+    std::string longHost = "mqtt." + std::string(124, 'd');
+    check(mqttStart(longHost.c_str(), 8883, "esp-board-1", "esp-board-1", "TOKEN-1", kDown) &&
+              stub::config.host == longHost,
+          "MQTT: a 129-character host is handed to the client whole");
+    mqttStop();
+  }
   startSession();
   const esp_mqtt_client_config_t& cfg = stub::config.raw;
   check(stub::config.host == "mqtt.warbletiot.com" && cfg.broker.address.port == 8883 &&

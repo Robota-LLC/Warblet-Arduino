@@ -429,11 +429,13 @@ void testWire() {
             !hasControlChar("caf\xc3\xa9 \"guest\"") && !hasControlChar(""),
         "control characters found; UTF-8 and quotes are fine");
 
-  // The longest head fits kHttpHeadMax: 128-character host, id and
-  // token (a claim code, so it is sent twice), a 32-character tag, a 20-digit
-  // nonce and a signature. Warblet.cpp does not check the length again.
+  // The longest head fits kHttpHeadMax: the longest host the board connects
+  // to (kHostTextMax, 130: a stored 128-character tcp. host as https.), a
+  // 128-character id and token (a claim code, so it is sent twice), a
+  // 32-character tag, a 20-digit nonce and a signature. Warblet.cpp does not
+  // check the length again.
   {
-    std::string h128(128, 'h'), id128(128, 'i'), tok128 = "CHIRP-" + std::string(122, 't');
+    std::string h128(kHostTextMax, 'h'), id128(128, 'i'), tok128 = "CHIRP-" + std::string(122, 't');
     std::string tag32(32, 'g'), sig(64, 'a');
     static char big[kHttpHeadMax];
     HttpIngest worst = {h128.c_str(), id128.c_str(), tok128.c_str(), tag32.c_str(),
@@ -713,29 +715,40 @@ void testWire() {
 
   // The host (contract §Hosts): a device endpoint is named for its transport,
   // and a stored host is an override for a self-hosted core. One stored for
-  // another transport, by an earlier demo or sketch, is not used.
+  // another transport, by an earlier demo or sketch, keeps its domain and
+  // takes this transport's name, so it never becomes Warblet's own host.
   {
     const char* https = "https.warbletiot.com";
     const char* mqtt = "mqtt.warbletiot.com";
-    check(hostFor("", https) == https && hostFor(nullptr, mqtt) == mqtt, "host: none stored, the built-in one");
-    check(hostFor("https.warbletiot.com", mqtt) == mqtt,
-          "host: MQTT does not use an HTTPS host stored by an earlier demo, but its own");
-    check(hostFor("mqtt.warbletiot.com", https) == https, "host: HTTPS does not use a stored MQTT host");
-    check(hostFor("http.warbletiot.com", https) == https && hostFor("tcp.example.org", https) == https &&
-              hostFor("udp.example.org", mqtt) == mqtt,
-          "host: http., tcp. and udp. are other transports too");
-    check(hostFor("HTTPS.example.org", mqtt) == mqtt, "host: a transport's name in capitals is still that transport");
-    check(hostFor("mqtt", https) == https, "host: a bare transport name is that transport");
+    char out[kHostTextMax + 1];
+    auto used = [&](const char* stored, const char* builtIn) { return std::string(hostFor(stored, builtIn, out)); };
+    check(hostFor("", https, out) == https && hostFor(nullptr, mqtt, out) == mqtt, "host: none stored, the built-in one");
+    check(used("https.warbletiot.com", mqtt) == "mqtt.warbletiot.com",
+          "host: an HTTPS host stored by an earlier demo: MQTT uses mqtt. on the same domain");
+    check(used("https.example.com", mqtt) == "mqtt.example.com",
+          "host: a self-hosted https.example.com: MQTT uses mqtt.example.com, not Warblet's host");
+    check(used("mqtt.example.com", https) == "https.example.com" && used("mqtt.warbletiot.com", https) == https,
+          "host: a stored MQTT host: HTTPS uses https. on the same domain");
+    check(used("http.example.com", https) == "https.example.com" && used("tcp.example.org", https) == "https.example.org" &&
+              used("udp.example.org", mqtt) == "mqtt.example.org",
+          "host: http., tcp. and udp. are other transports too, and take this one's name");
+    check(used("HTTPS.Example.org", mqtt) == "mqtt.Example.org", "host: a transport's name in capitals is still that transport");
+    check(used("mqtt", https) == "https", "host: a bare transport name becomes this transport's");
     const char* ownMqtt = "mqtt.my-core.example";
     const char* ownHttps = "https.my-core.example";
-    check(hostFor(ownMqtt, mqtt) == ownMqtt && hostFor(ownHttps, https) == ownHttps,
-          "host: a self-hosted core's name for this transport is used");
+    check(hostFor(ownMqtt, mqtt, out) == ownMqtt && hostFor(ownHttps, https, out) == ownHttps,
+          "host: a self-hosted core's name for this transport is used as it is");
     const char* plain = "my-core.example.com";
     const char* address = "192.168.1.20";
     const char* longer = "httpsx.example.com";
-    check(hostFor(plain, mqtt) == plain && hostFor(plain, https) == plain && hostFor(address, mqtt) == address &&
-              hostFor(longer, mqtt) == longer,
+    check(hostFor(plain, mqtt, out) == plain && hostFor(plain, https, out) == plain &&
+              hostFor(address, mqtt, out) == address && hostFor(longer, mqtt, out) == longer,
           "host: a name that names no transport is used as it was pushed");
+    // The longest: a 128-character stored host whose 3-letter label becomes
+    // https, two characters longer.
+    std::string longest = "tcp." + std::string(124, 'd');
+    check(used(longest.c_str(), https) == "https." + std::string(124, 'd') && kHostTextMax == 130,
+          "host: a 128-character tcp. host becomes a 130-character https. host, whole");
   }
 }
 

@@ -1604,11 +1604,14 @@ int main() {
     broker = SimBroker();
   }
 
-  // 16d. A host stored for another transport is not used (contract §Hosts).
-  // The desk display's demo pushes https.warbletiot.com; a sketch over MQTT
-  // set up later on the same board through the setup page's custom lane,
-  // which pushes no host, must still reach mqtt.warbletiot.com. The console
-  // says why the stored host was left out.
+  // 16d. A host stored for another transport (contract §Hosts: a device
+  // endpoint is named for its transport). The desk display's demo pushes
+  // https.warbletiot.com; a sketch over MQTT set up later on the same board
+  // through the setup page's custom lane, which pushes no host, must still
+  // reach mqtt.warbletiot.com. The stored host keeps its domain and takes
+  // this transport's name, so a self-hosted core's https.example.com becomes
+  // mqtt.example.com: never Warblet's own host, which is not the owner's
+  // server. The console names the host used.
   {
     std::string kept = sim.stored;
     broker = SimBroker();
@@ -1622,7 +1625,23 @@ int main() {
       m.wait(3000);
       check(broker.host == "mqtt.warbletiot.com" && m.connected() && m.sendNumber(1),
             "host: an HTTPS host stored by an earlier demo: MQTT reaches mqtt.warbletiot.com");
-      check(said("https.warbletiot.com") && said("is for another transport"), "host: ...and says why");
+      check(said("the stored host https.warbletiot.com is for another transport, so mqtt.warbletiot.com is used"),
+            "host: ...and names the host it used");
+    }
+    // A self-hosted core's HTTPS host: MQTT goes to the same core, not to Warblet.
+    sim.stored = base + "https.example.com\"}";
+    broker = SimBroker();
+    Serial.out.clear();
+    {
+      Warblet m(Warblet::MQTT);
+      m.begin();
+      m.wait(3000);
+      m.sendNumber(1);
+      check(broker.starts >= 1 && broker.host == "mqtt.example.com" && broker.published.empty(),
+            "host: a self-hosted https.example.com: MQTT goes to mqtt.example.com, not to mqtt.warbletiot.com (was " +
+                broker.host + ")");
+      check(said("the stored host https.example.com is for another transport, so mqtt.example.com is used"),
+            "host: ...and names mqtt.example.com");
     }
     sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(202, "Accepted") : answer(204, "No Content"); };
     sim.stored = base + "mqtt.warbletiot.com\"}";
@@ -1632,6 +1651,21 @@ int main() {
       h.wait(3000);
       check(h.sendNumber(1) && sim.requests.back().host == "https.warbletiot.com",
             "host: an MQTT host stored by an earlier sketch: HTTPS reaches https.warbletiot.com");
+    }
+    sim.stored = base + "mqtt.example.com\"}";
+    {
+      Warblet h;
+      h.onCommand(recordCommand);
+      size_t at = sim.requests.size();
+      h.begin();
+      h.wait(15000);
+      h.sendNumber(1);
+      std::string hosts;
+      for (size_t i = at; i < sim.requests.size(); i++) {
+        if (sim.requests[i].host != "https.example.com") hosts += " " + sim.requests[i].host;
+      }
+      check(sim.requests.size() > at + 1 && hosts.empty(),
+            "host: a self-hosted mqtt.example.com: every HTTPS request goes to https.example.com (others:" + hosts + ")");
     }
     sim.stored = base + "my-core.example.com\"}";
     {
