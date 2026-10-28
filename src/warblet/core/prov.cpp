@@ -110,10 +110,11 @@ const char* provResultLine(ProvResult r) {
 
 ProvResult applyPush(const char* json, size_t len, const Settings& stored, Settings& merged) {
   // First pass: is it one valid object, and does it carry both credentials?
+  bool claim = false;
   {
     JsonObject o(json, len);
     JsonValue k, v;
-    bool claim = false, token = false;
+    bool token = false;
     while (o.next(k, v)) {
       if (jsonKeyIs(k, "claim")) claim = true;
       if (jsonKeyIs(k, "token")) token = true;
@@ -123,7 +124,7 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
   }
 
   merged = stored;
-  bool pushedSsid = false, pushedAps = false;
+  bool pushedSsid = false, pushedAps = false, pushedKey = false;
   JsonObject o(json, len);
   JsonValue k, v;
   while (o.next(k, v)) {
@@ -151,6 +152,7 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
       good = takeString(v, merged.key, sizeof merged.key) &&
              (merged.key[0] == '\0' || decodeKey(merged.key, strlen(merged.key), raw));
       wipe(raw, sizeof raw);
+      pushedKey = true;
     }
     // Every other key (level, thread, tls, t, ...) is ignored, as v1 requires.
     if (!good) return ProvResult::BadJson;
@@ -160,6 +162,10 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
     merged.hasAps = false;
     merged.apsCount = 0;
   }
+  // A setup code, or an id other than the stored one, starts a new device.
+  // The stored signing key was the old device's, so it goes unless this push
+  // brings one. A token, networks or a key alone keep it (v1.3's merge).
+  if ((claim || strcmp(merged.hwId, stored.hwId) != 0) && !pushedKey) merged.key[0] = '\0';
   return merged.ready() ? ProvResult::Ok : ProvResult::MissingField;
 }
 

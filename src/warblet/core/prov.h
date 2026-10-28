@@ -47,6 +47,10 @@ const char* provResultLine(ProvResult r);
 
 // Merge one push onto stored, writing the result to merged (which may not be
 // the same object as stored). Only Ok means merged is complete and valid.
+// A push that carries a setup code ("claim"), or an id other than the stored
+// one, starts a new device: the stored signing key is dropped unless the same
+// push carries "key". Stored settings load as a push onto empty settings, and
+// carry their own key.
 // Stricter than chirp_prov.py, on purpose, because these values go into
 // fixed buffers and a key that cannot decode would sign nothing useful:
 //   - a string longer than its field above is bad-json;
