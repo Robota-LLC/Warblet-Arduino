@@ -173,7 +173,15 @@ void Warblet::begin(const char* wifiName, const char* wifiPassword, const char* 
   board::serialBegin(115200);
   started_ = true;
   typed_ = true;
+  // What the board has stored: a key that arrived over the air is kept there,
+  // with the settings it came for (deliverCommand).
+  size_t len = 0;
   settings_.clear();
+  scratch_.clear();
+  if (board::loadSettings(storeText, sizeof storeText, len) &&
+      applyPush(storeText, len, settings_, scratch_) != ProvResult::Ok) {
+    scratch_.clear();
+  }
   bool ok = copyField(settings_.ssid, sizeof settings_.ssid, wifiName) &&
             copyField(settings_.pass, sizeof settings_.pass, wifiPassword) &&
             copyField(settings_.hwId, sizeof settings_.hwId, deviceId) &&
@@ -196,6 +204,12 @@ void Warblet::begin(const char* wifiName, const char* wifiPassword, const char* 
       say("the signing key should be the 44-character key from the device page");
       settings_.clear();
     }
+  } else if (scratch_.key[0] && strcmp(scratch_.hwId, settings_.hwId) == 0) {
+    // No key typed: the one stored for this device id is used from then on.
+    // Another id is a new device, and the key was not its (the key rule).
+    memcpy(settings_.key, scratch_.key, sizeof settings_.key);
+    hasKey_ = decodeKey(settings_.key, strlen(settings_.key), key_);
+    if (hasKey_) say("using the signing key stored on this board for this device id");
   }
   state_ = settings_.ready() ? JOINING_WIFI : NOT_SET_UP;
   lastAnswerMs_ = millis();
