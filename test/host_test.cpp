@@ -700,6 +700,33 @@ void testWire() {
   parse("HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\n\r\n", sizeof bodyBuf, 7, rsp, bodyBuf);
   check(rsp->complete() && rsp->status() == 401, "401 with an empty body");
   delete rsp;
+
+  // The host (contract §Hosts): a device endpoint is named for its transport,
+  // and a stored host is an override for a self-hosted core. One stored for
+  // another transport, by an earlier demo or sketch, is not used.
+  {
+    const char* https = "https.warbletiot.com";
+    const char* mqtt = "mqtt.warbletiot.com";
+    check(hostFor("", https) == https && hostFor(nullptr, mqtt) == mqtt, "host: none stored, the built-in one");
+    check(hostFor("https.warbletiot.com", mqtt) == mqtt,
+          "host: MQTT does not use an HTTPS host stored by an earlier demo, but its own");
+    check(hostFor("mqtt.warbletiot.com", https) == https, "host: HTTPS does not use a stored MQTT host");
+    check(hostFor("http.warbletiot.com", https) == https && hostFor("tcp.example.org", https) == https &&
+              hostFor("udp.example.org", mqtt) == mqtt,
+          "host: http., tcp. and udp. are other transports too");
+    check(hostFor("HTTPS.example.org", mqtt) == mqtt, "host: a transport's name in capitals is still that transport");
+    check(hostFor("mqtt", https) == https, "host: a bare transport name is that transport");
+    const char* ownMqtt = "mqtt.my-core.example";
+    const char* ownHttps = "https.my-core.example";
+    check(hostFor(ownMqtt, mqtt) == ownMqtt && hostFor(ownHttps, https) == ownHttps,
+          "host: a self-hosted core's name for this transport is used");
+    const char* plain = "my-core.example.com";
+    const char* address = "192.168.1.20";
+    const char* longer = "httpsx.example.com";
+    check(hostFor(plain, mqtt) == plain && hostFor(plain, https) == plain && hostFor(address, mqtt) == address &&
+              hostFor(longer, mqtt) == longer,
+          "host: a name that names no transport is used as it was pushed");
+  }
 }
 
 // ---- CHIRP-PROV --------------------------------------------------------------

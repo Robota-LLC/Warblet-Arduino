@@ -1573,6 +1573,48 @@ int main() {
     broker = SimBroker();
   }
 
+  // 16d. A host stored for another transport is not used (contract §Hosts).
+  // The desk display's demo pushes https.warbletiot.com; a sketch over MQTT
+  // set up later on the same board through the setup page's custom lane,
+  // which pushes no host, must still reach mqtt.warbletiot.com. The console
+  // says why the stored host was left out.
+  {
+    std::string kept = sim.stored;
+    broker = SimBroker();
+    sim.refusedMark.clear();
+    const std::string base = "{\"ssid\":\"lab\",\"pass\":\"pw\",\"token\":\"TOKEN-H\",\"hwid\":\"sim-board-1\",\"host\":\"";
+    sim.stored = base + "https.warbletiot.com\"}";
+    Serial.out.clear();
+    {
+      Warblet m(Warblet::MQTT);
+      m.begin();
+      m.wait(3000);
+      check(broker.host == "mqtt.warbletiot.com" && m.connected() && m.sendNumber(1),
+            "host: an HTTPS host stored by an earlier demo: MQTT reaches mqtt.warbletiot.com");
+      check(said("https.warbletiot.com") && said("is for another transport"), "host: ...and says why");
+    }
+    sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(202, "Accepted") : answer(204, "No Content"); };
+    sim.stored = base + "mqtt.warbletiot.com\"}";
+    {
+      Warblet h;
+      h.begin();
+      h.wait(3000);
+      check(h.sendNumber(1) && sim.requests.back().host == "https.warbletiot.com",
+            "host: an MQTT host stored by an earlier sketch: HTTPS reaches https.warbletiot.com");
+    }
+    sim.stored = base + "my-core.example.com\"}";
+    {
+      Warblet h;
+      h.begin();
+      h.wait(3000);
+      h.sendNumber(1);
+      check(sim.requests.back().host == "my-core.example.com",
+            "host: a self-hosted core's host that names no transport is still used");
+    }
+    sim.stored = kept;
+    broker = SimBroker();
+  }
+
   // 17. Not on an account, over MQTT (contract v0.47): the broker refuses a
   // CONNECT for an id that is no device with code 4 (its device was deleted,
   // or its setup code was spent). The board stops as it does on HTTPS: no
