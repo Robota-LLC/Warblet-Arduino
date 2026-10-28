@@ -90,6 +90,26 @@ int main() {
   check(tls.caCert != nullptr && strcmp(tls.caCert, kRootCertificates) == 0, "TLS: the pinned roots are loaded");
   check(tls.connectionTimeoutMs == 10000 && tls.handshakeTimeoutS == 15, "TLS: a 10 s connect and 15 s handshake limit");
 
+  // ---- settings in NVS -------------------------------------------------------
+  // Warblet.cpp keeps the settings text in a 2,048-byte buffer, so a record
+  // is at most 2,047 characters. Preferences::getString() counts the NUL in
+  // what it returns, as nvs_get_str does: the longest record loads whole.
+  {
+    static char text[2048];
+    size_t len = 0;
+    for (size_t n : {(size_t)1, (size_t)2000, (size_t)2046, (size_t)2047}) {
+      std::string record(n, 'r');
+      len = 0;
+      bool ok = saveSettings(record.c_str(), record.size()) && loadSettings(text, sizeof text, len) && len == n &&
+                memcmp(text, record.data(), n) == 0 && text[n] == '\0';
+      check(ok, "settings: a record of " + std::to_string(n) + " characters loads whole at the next start");
+    }
+    std::string tooLong(2048, 'r');
+    len = 0;
+    check(saveSettings(tooLong.c_str(), tooLong.size()) && !loadSettings(text, sizeof text, len),
+          "settings: a record with no room for its NUL is not loaded cut short");
+  }
+
   // ---- the MQTT session's configuration --------------------------------------
   startSession();
   const esp_mqtt_client_config_t& cfg = stub::config.raw;
