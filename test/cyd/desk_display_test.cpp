@@ -365,6 +365,33 @@ int main() {
   check(!sent.empty() && sent[0].first == "hello", "set up again: the first report is tagged hello");
   check(strip() == "Connected" && middle() == "Type a message for|sim-desk-2 on your|Warblet dashboard.",
         "set up again: Connected, and the waiting text names the new id");
+  // ---- the routine's lines across the clock's wrap ----------------------------------
+  // millis() starts again from 0 after 49.7 days. A line heard just after the
+  // wrap is the newest, not the oldest: when a fourth computer reports, the
+  // one heard from longest ago still goes.
+  if (sizeof(unsigned long) == 4) {  // as on the board, and in this suite's MinGW build
+    const unsigned long target = 0xFFFFFFFFUL - 30000UL;  // 30 s before the wrap
+    while (target - millis() > 0x40000000UL) {  // steps the library's own waits take as time passing
+      simNowMs += 0x40000000UL;
+      runFor(1000);
+    }
+    simNowMs = target;
+    command("info:10% full: alpha /");
+    command("info:20% full: beta /");
+    command("info:30% full: gamma /");
+    runFor(10000);  // past the wrap
+    bool wrapped = millis() < 60000UL;
+    command("info:40% full: beta /");   // beta heard again, after the wrap
+    command("info:50% full: delta /");  // a fourth computer: alpha, heard from longest ago, goes
+    check(wrapped && simWordsAt(INFO_TOP + 1) == "40% beta /" && simWordsAt(INFO_TOP + 19) == "30% gamma /" &&
+              simWordsAt(INFO_TOP + 37) == "50% delta /",
+          "after millis() wraps, a fourth computer still replaces the one heard from longest ago (shown: " +
+              simWordsAt(INFO_TOP + 1) + " | " + simWordsAt(INFO_TOP + 19) + " | " + simWordsAt(INFO_TOP + 37) + ")");
+    check(strip() == "Connected" && sim.restarts.size() == restartsSeen, "...and the board stays connected across it");
+  } else {
+    printf("SKIP  the millis() wrap: unsigned long is not 32 bits on this host\n");
+  }
+
   check(!rebootFailed, "no more restarts than the test expects");
 
   // ---- the routine and the decoder are the MicroPython demo's ------------------
