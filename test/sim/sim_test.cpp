@@ -384,6 +384,65 @@ int main() {
     sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(202, "Accepted") : answer(204, "No Content"); };
   }
 
+  // 9c. A setup code typed into begin() that differs from the stored one is
+  // a new device, even under the same id: Warblet has given it no key yet,
+  // so the key stored for the device before it is not used. The same code
+  // typed again is the same device and keeps the key that arrived for it.
+  {
+    std::string kept = sim.stored;
+    sim.stored.clear();
+    sim.refusedMark.clear();
+    bool giveKey = true;
+    sim.server = [&](const SimRequest& r) -> std::string {
+      if (isUplink(r)) return answer(202, "Accepted");
+      if (!giveKey) return answer(204, "No Content");
+      giveKey = false;
+      return answer(200, "OK", std::string("CHIRPKEY1 ") + kKey2 + "\n", "X-Chirp-Down: key\r\n");
+    };
+    Serial.out.clear();
+    {
+      Warblet t;
+      t.begin("lab", "pw", "sim-board-1", "CHIRP-AAAA2345");
+      t.onCommand(recordCommand);
+      t.wait(15000);  // the first command check brings the key
+    }
+    bool arrived = said("a signing key arrived over the air and was stored");
+    auto signedSince = [&](size_t at, const char* keyB64) {
+      for (size_t i = at; i < sim.requests.size(); i++) {
+        if (!isPoll(sim.requests[i]) && signatureOk(sim.requests[i], keyB64)) return true;
+      }
+      return false;
+    };
+    {
+      Warblet t;  // another setup code, the same id: a new device
+      t.begin("lab", "pw", "sim-board-1", "CHIRP-BBBB2345");
+      size_t at = sim.requests.size();
+      t.wait(3000);
+      bool sent = t.sendNumber(1);
+      check(arrived && sent && sim.requests.size() > at &&
+                sim.requests.back().header("X-Chirp-Signature").empty(),
+            "typed settings: another setup code for the same id is a new device and does not use the stored key");
+    }
+    {
+      Warblet t;  // the first code again, after a restart: the same device
+      t.begin("lab", "pw", "sim-board-1", "CHIRP-AAAA2345");
+      size_t at = sim.requests.size();
+      t.wait(3000);
+      t.sendNumber(1);
+      check(signedSince(at, kKey2), "typed settings: the same setup code after a restart keeps the key that arrived for it");
+    }
+    {
+      Warblet t;  // a key typed with another setup code is the one used
+      t.begin("lab", "pw", "sim-board-1", "CHIRP-BBBB2345", kKey1);
+      size_t at = sim.requests.size();
+      t.wait(3000);
+      t.sendNumber(1);
+      check(signedSince(at, kKey1), "typed settings: a key typed with another setup code is the one used");
+    }
+    sim.stored = kept;
+    sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(202, "Accepted") : answer(204, "No Content"); };
+  }
+
   // 10. A setup push that arrives while the board is busy.
   // The page probes; for 10 s after the answer the board only listens.
   sim.server = [&](const SimRequest& r) {
