@@ -516,6 +516,29 @@ int main() {
     check(said("messages wait 20 s,"), "a " + std::to_string(code) + " holds reports for 20 s first");
   }
 
+  // 12a3. Every 4xx but 429 holds reports as a 401 does: 400 (a request
+  // Warblet cannot take) and 423 (the account is being deleted) too. A sketch
+  // that sends every second for ten minutes reaches Warblet a few times, not
+  // once a second, and the console says it once.
+  for (int code : {400, 423}) {
+    sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(code, "X") : answer(204, "No Content"); };
+    Warblet w;
+    w.begin();
+    w.wait(15000);
+    Serial.out.clear();
+    size_t at = sim.requests.size();
+    for (int i = 0; i < 600; i++) {
+      w.sendNumber(i);
+      w.wait(1000);
+    }
+    int uplinks = 0;
+    for (size_t i = at; i < sim.requests.size(); i++) uplinks += isUplink(sim.requests[i]);
+    check(uplinks <= 6 && said("not stored, answer " + std::to_string(code) + "; messages wait 60 s,") &&
+              occurrences("not stored") == 1,
+          "a " + std::to_string(code) + " holds reports a minute, then longer, and is said once (" +
+              std::to_string(uplinks) + " sent in ten minutes)");
+  }
+
   // 12b. A long outage with Wi-Fi up (the server does not answer for 45
   // minutes): command checks slow down, but to a minute, not ten, so a
   // command queued meanwhile is collected soon after the server is back.

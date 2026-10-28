@@ -90,9 +90,10 @@ for pair in SensorReading:EX_SENSOR Button:EX_BUTTON LightByCommand:EX_LIGHT \
     src/warblet/core/sha256.cpp src/warblet/core/text.cpp src/warblet/core/sign.cpp \
     src/warblet/core/wire.cpp src/warblet/core/json.cpp src/warblet/core/prov.cpp
   "$OUT/example_$ex" record "$OUT/sent_$ex.txt"
-  # Every request refused (401, 403) or failing (500) for ten minutes: the
-  # examples that say hello until it is stored must not flood Warblet.
-  for status in 401 403 500; do "$OUT/example_$ex" flood $status; done
+  # Every request refused (400, 401, 403, 423) or failing (500) for ten
+  # minutes: the examples that say hello until it is stored must not flood
+  # Warblet.
+  for status in 400 401 403 423 500; do "$OUT/example_$ex" flood $status; done
   # The examples that say hello until it is stored: after 10 and 20 minutes
   # of 401s, a corrected token pushed over USB gets the hello stored at once.
   case $ex in

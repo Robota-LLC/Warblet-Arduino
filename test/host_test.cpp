@@ -687,6 +687,16 @@ void testWire() {
   check(b.after(503, 120) == 120000, "a server error's Retry-After is still honoured");
   check(b.after(429, 1800) == 1800000, "Retry-After longer than the maximum is honoured");
   check(b.after(429, 99999) == 3600000, "...up to an hour");
+  // Every 4xx but 429 is a refusal that will not fix itself soon: 400 (a
+  // request Warblet cannot take) and 423 (the account is being deleted) too.
+  for (int code : {400, 403, 404, 413, 423}) {
+    Backoff r(10000, 600000, 60000);
+    bool minute = r.after(code, 0) == 60000 && r.failing() && r.changed();
+    bool doubles = r.after(code, 0) == 120000 && !r.changed();
+    for (int i = 0; i < 6; i++) r.after(code, 0);
+    check(minute && doubles && r.wait() == 600000,
+          ("a " + std::to_string(code) + ": a minute, doubling up to ten, as a 401").c_str());
+  }
 
   parse("HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\n0123456789", 4, 1, rsp, bodyBuf);
   check(rsp->complete() && rsp->tooLong() && rsp->bodyLen() == 4, "a body past the buffer is reported, not hidden");
