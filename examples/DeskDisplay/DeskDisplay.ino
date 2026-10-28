@@ -202,7 +202,8 @@ void addInfo(String line) {
   if (infoCount == INFO_ROWS) {  // full: the one heard from longest ago goes
     int oldest = 0;
     for (int i = 1; i < infoCount; i++) {
-      if (infos[i].at < infos[oldest].at) oldest = i;
+      // Compare ages, not times: millis() starts again from 0 after 49 days.
+      if (millis() - infos[i].at > millis() - infos[oldest].at) oldest = i;
     }
     for (int i = oldest; i < infoCount - 1; i++) infos[i] = infos[i + 1];
     infoCount--;
