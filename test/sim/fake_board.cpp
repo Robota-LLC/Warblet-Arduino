@@ -158,6 +158,10 @@ void simNote(const char* text) {  // the board layer has something to say (a dro
   pendingNews.push_back(kMqttNote);
 }
 
+// The ESP32 board layer keeps the last four changes; a sketch that does not
+// call loop() while the client fails again and again loses the older ones.
+void simForgetNews() { pendingNews.clear(); }
+
 void simDropSession() {  // the broker closes the board's session
   if (!mqttStarted || brokerState != kMqttConnected) return;
   brokerState = kMqttLost;

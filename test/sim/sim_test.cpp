@@ -1655,6 +1655,29 @@ int main() {
         printf("      restartWhenStuck over MQTT: restarted %ld s after the session dropped\n", at / 1000);
       }
     }
+    {
+      // A sketch that waits with delay(): the session drops during a minute
+      // in which loop() is not called, and the client's failed attempts push
+      // the "session lost" news out of the board layer's ring of four. The
+      // session was seen up a minute ago, so no restart yet.
+      broker = SimBroker();
+      sim.restarts.clear();
+      Warblet m(Warblet::MQTT);
+      m.begin();
+      m.restartWhenStuck(tenMin);
+      for (int i = 0; i < 30; i++) {
+        m.sendNumber(i);
+        m.wait(60000);
+      }
+      m.sendNumber(30);
+      broker.unreachable = true;
+      warblet::board::simDropSession();
+      delay(60000);  // the sketch's own wait: no loop()
+      warblet::board::simForgetNews();
+      m.wait(60000);
+      check(sim.restarts.empty(),
+            "restartWhenStuck over MQTT: with the drop's news lost in a delay(), the session seen up a minute ago counts");
+    }
     broker = SimBroker();
     sim.restarts.clear();
     sim.stored = kept;

@@ -56,6 +56,7 @@ extern SimBroker broker;
 namespace warblet {
 namespace board {
 void simDropSession();  // the broker closes the board's session
+void simForgetNews();   // news not read yet is gone, as when the ESP32's ring of four overflows
 void simNote(const char* text);  // the board layer reports something to say as it is
 void simClockLost();             // the clock is gone, as after a power cut
 }  // namespace board
