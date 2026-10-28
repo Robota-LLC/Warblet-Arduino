@@ -36,13 +36,19 @@ bool hasControlChar(const char* s);
 static const char* const kHttpsHost = "https.warbletiot.com";
 static const char* const kMqttHost = "mqtt.warbletiot.com";
 
-// The host to connect to: stored (an override for a self-hosted core), or
-// builtIn when none is stored. A device endpoint is named for its transport
-// (<transport>.<domain>), so a stored host whose first label names another
-// transport (https, http, mqtt, tcp, udp) was stored for that transport, by
-// an earlier demo or sketch, and builtIn is used instead. builtIn's own first
-// label is this transport. Returns one of the two pointers.
-const char* hostFor(const char* stored, const char* builtIn);
+// The longest host the board connects to: a stored host of 128 characters
+// whose 3-letter transport name (tcp, udp) becomes https.
+static const size_t kHostTextMax = 130;
+
+// The host to connect to: builtIn when none is stored, else the stored one
+// (an override for a self-hosted core). A device endpoint is named for its
+// transport (<transport>.<domain>), so a stored host whose first label names
+// another transport (https, http, mqtt, tcp, udp) was stored for that one, by
+// an earlier demo or sketch: it keeps its domain and takes this transport's
+// name, builtIn's first label (https.example.com becomes mqtt.example.com), so
+// it never becomes Warblet's own host on someone else's behalf. Returns
+// builtIn, stored, or out with the new name in it.
+const char* hostFor(const char* stored, const char* builtIn, char out[kHostTextMax + 1]);
 
 // ---- MQTT -------------------------------------------------------------------
 

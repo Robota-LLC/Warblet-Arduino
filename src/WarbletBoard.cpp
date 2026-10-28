@@ -183,7 +183,7 @@ struct Command {
 esp_mqtt_client_handle_t mqttClient = nullptr;
 portMUX_TYPE mqttLock = portMUX_INITIALIZER_UNLOCKED;
 volatile bool mqttUp = false;
-char mqttHost[129], mqttId[129], mqttPass[129], mqttSub[160];
+char mqttHost[kHostTextMax + 1], mqttId[129], mqttPass[129], mqttSub[160];
 Command* waitingHead = nullptr;  // under mqttLock
 Command* waitingTail = nullptr;  // under mqttLock
 size_t waitingBytes = 0;         // under mqttLock

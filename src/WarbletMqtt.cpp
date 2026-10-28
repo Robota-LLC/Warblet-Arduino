@@ -19,6 +19,7 @@ namespace {
 const uint16_t kMqttPort = 8883;
 const unsigned long kMqttWaitMs = 15000UL;  // for a session before a first report
 const unsigned long kMqttAckMs = 10000UL;   // for the broker's acknowledgement
+char mqttHostText[kHostTextMax + 1];        // mqttHost(): a stored host under MQTT's name
 
 }  // namespace
 
@@ -30,8 +31,9 @@ Warblet::Warblet(Transport transport) : Warblet() {
 }
 
 // A pushed host is an override for a self-hosted core; one stored for another
-// transport (an earlier demo's https. host, say) is not used (contract §Hosts).
-const char* Warblet::mqttHost() const { return hostFor(settings_.host, kMqttHost); }
+// transport (an earlier demo's https. host, say) keeps its domain and takes
+// MQTT's name (contract §Hosts).
+const char* Warblet::mqttHost() const { return hostFor(settings_.host, kMqttHost, mqttHostText); }
 
 // New settings start a new session at once, even in the middle of a back-off.
 void Warblet::restartMqtt() {

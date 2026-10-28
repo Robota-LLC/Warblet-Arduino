@@ -42,6 +42,7 @@ const int kTakeAtOnce = 10;       // commands taken one after another before the
 // Static, not on the stack: small boards have small stacks.
 char storeText[kStoreMax];
 uint8_t commandBody[kCommandMax + 1];
+char hostText[kHostTextMax + 1];  // host(): a stored host under HTTPS's name
 
 // Copy a typed-in value into a settings field; false when it does not fit or
 // holds a control character.
@@ -53,14 +54,16 @@ bool copyField(char* field, size_t cap, const char* value) {
   return true;
 }
 
-// A stored host for another transport is not used (contract §Hosts); say so,
-// so a board that reaches Warblet's own host instead is no mystery.
-void sayIfHostLeftOut(const Settings& s, const char* builtIn) {
-  if (s.host[0] == '\0' || hostFor(s.host, builtIn) == s.host) return;
+// A stored host for another transport is used under this transport's name
+// (contract §Hosts); say which host that is.
+void sayIfHostRenamed(const Settings& s, const char* builtIn) {
+  char used[kHostTextMax + 1];
+  const char* host = hostFor(s.host, builtIn, used);
+  if (s.host[0] == '\0' || host == s.host) return;
   Serial.print("warblet: the stored host ");
   Serial.print(s.host);
   Serial.print(" is for another transport, so ");
-  Serial.print(builtIn);
+  Serial.print(host);
   Serial.println(" is used");
 }
 
@@ -77,7 +80,7 @@ void Warblet::say(const char* text) {
   Serial.println(text);
 }
 
-const char* Warblet::host() const { return hostFor(settings_.host, kHttpsHost); }
+const char* Warblet::host() const { return hostFor(settings_.host, kHttpsHost, hostText); }
 
 // For a while after answering the setup page's probe, the board does nothing
 // but listen on USB, so the push that follows is read as it arrives.
@@ -98,7 +101,7 @@ void Warblet::begin() {
   if (board::loadSettings(storeText, sizeof storeText, len) &&
       applyPush(storeText, len, scratch_, settings_) == ProvResult::Ok) {
     say("settings loaded from this board");
-    sayIfHostLeftOut(settings_, mqtt_ != nullptr ? kMqttHost : kHttpsHost);
+    sayIfHostRenamed(settings_, mqtt_ != nullptr ? kMqttHost : kHttpsHost);
   } else {
     settings_.clear();
   }
@@ -349,7 +352,7 @@ bool Warblet::serviceSetup() {
           board::restart();
         }
         say("settings saved; connecting with them");
-        sayIfHostLeftOut(settings_, mqtt_ != nullptr ? kMqttHost : kHttpsHost);
+        sayIfHostRenamed(settings_, mqtt_ != nullptr ? kMqttHost : kHttpsHost);
       }
     }
   }
