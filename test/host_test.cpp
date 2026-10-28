@@ -930,12 +930,20 @@ void testProv() {
         {"{\"hwid\":\"board-1\",\"token\":\"TOK-TWO\"}", key, "key rule: the same id with a token keeps the key"},
         {std::string("{\"token\":\"TOK-TWO\",\"key\":\"") + key2 + "\",\"hwid\":\"board-1\"}", key2,
          "key rule: a token with its new key (a rotation) gets the new key"},
+        // CHIRP-PROV v1.7: the portal finds a board's device whatever the case
+        // of its id, and pushes the device's own spelling.
+        {"{\"ssid\":\"w\",\"pass\":\"h\",\"hwid\":\"Board-1\"}", key,
+         "key rule: the same id in other letter case is the same device and keeps the key"},
     };
     for (const Case& c : cases) {
       ProvResult got = push(c.json.c_str(), signedBoard);
       check(got == ProvResult::Ok && strcmp(merged.key, c.keyAfter) == 0, c.why,
             std::string("\n      ") + c.json + "\n      key after: \"" + merged.key + "\"");
     }
+    // An empty claim or id starts nothing: the push is incomplete and stores nothing.
+    check(push("{\"claim\":\"\"}", signedBoard) == ProvResult::MissingField &&
+              push("{\"hwid\":\"\"}", signedBoard) == ProvResult::MissingField,
+          "key rule: an empty claim or id is refused (missing-field), so nothing is stored");
     // A board loads its stored settings as a push onto nothing: the record
     // carries its own key, so a restart keeps it.
     char text[1600];
