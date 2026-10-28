@@ -162,10 +162,11 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
     merged.hasAps = false;
     merged.apsCount = 0;
   }
-  // A setup code, or an id other than the stored one, starts a new device.
-  // The stored signing key was the old device's, so it goes unless this push
-  // brings one. A token, networks or a key alone keep it (v1.3's merge).
-  if ((claim || strcmp(merged.hwId, stored.hwId) != 0) && !pushedKey) merged.key[0] = '\0';
+  // A setup code, or an id other than the stored one (letter case aside),
+  // starts a new device. The stored signing key was the old device's, so it
+  // goes unless this push brings one. A token, networks or a key alone keep
+  // it (v1.3's merge; CHIRP-PROV v1.7).
+  if ((claim || !sameHwId(merged.hwId, stored.hwId)) && !pushedKey) merged.key[0] = '\0';
   return merged.ready() ? ProvResult::Ok : ProvResult::MissingField;
 }
 

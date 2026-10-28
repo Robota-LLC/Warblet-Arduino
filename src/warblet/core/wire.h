@@ -19,6 +19,11 @@ bool validTag(const char* tag);
 static const size_t kHwIdMax = 128;
 bool validHwId(const char* hwId);
 
+// Two device ids name the same device when they match ignoring letter case:
+// the setup page finds a board's device whatever the case of its id, and
+// pushes the device's own spelling (CHIRP-PROV v1.7).
+bool sameHwId(const char* a, const char* b);
+
 // A claim code is "CHIRP-" + 8 characters; it rides where the token goes
 // until it is redeemed, and then it IS the token (contract §Claim-code-first).
 bool isClaimCode(const char* credential);

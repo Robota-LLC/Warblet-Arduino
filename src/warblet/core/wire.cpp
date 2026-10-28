@@ -82,6 +82,8 @@ bool validHwId(const char* hwId) {
   return true;
 }
 
+bool sameHwId(const char* a, const char* b) { return equalsNoCase(a, strlen(a), b); }
+
 bool isClaimCode(const char* credential) {
   return credential != nullptr && strncmp(credential, "CHIRP-", 6) == 0;
 }
