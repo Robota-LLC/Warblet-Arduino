@@ -124,9 +124,9 @@ bool loadSettings(char* out, size_t cap, size_t& len) {
   if (!p.begin("warblet", true)) return false;
   bool ok = false;
   if (p.isKey("settings")) {
-    len = p.getString("settings", out, cap);
-    ok = len > 0 && len < cap;
-    if (ok && out[len - 1] == '\0') len--;  // the stored length counts the NUL
+    len = p.getString("settings", out, cap);  // the length counts the NUL, so it may be cap
+    ok = len > 0 && len <= cap && out[len - 1] == '\0';
+    if (ok) len--;
   }
   p.end();
   return ok;
