@@ -45,6 +45,9 @@ void Warblet::restartMqtt() {
 // the commands that arrived (also while a refused session backs off: the
 // broker counted them delivered).
 void Warblet::serviceMqtt() {
+  // An open session is the broker answering (its keepalive): for
+  // restartWhenStuck(), the time counts from when it was last up.
+  if (board::mqttConnected()) lastAnswerMs_ = millis();
   bool backingOff = !mqttStarted_ && mqttRetryAt_ != 0 && (long)(millis() - mqttRetryAt_) < 0;
   if (!mqttStarted_ && !backingOff) {
     char down[160];
