@@ -862,6 +862,52 @@ void testProv() {
   push("{\"token\":\"TOK-NEW\"}", claimed);
   check(strcmp(merged.credential, "TOK-NEW") == 0, "a token push evicts the stored claim code");
 
+  // The key rule: a push that carries a setup code, or an id other than the
+  // stored one, starts a new device, so the stored signing key goes unless
+  // that same push carries a key. A token alone, networks alone or a key
+  // alone keep it, as v1.3's merge says.
+  {
+    const char* key2 = "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=";
+    Settings signedBoard;
+    push((std::string("{\"ssid\":\"workshop\",\"pass\":\"hunter2\",\"token\":\"TOK-ONE\",\"hwid\":\"board-1\",\"key\":\"") +
+          key + "\"}").c_str(),
+         empty);
+    signedBoard = merged;
+    struct Case {
+      std::string json;
+      const char* keyAfter;
+      const char* why;
+    };
+    const Case cases[] = {
+        {"{\"ssid\":\"w\",\"pass\":\"h\",\"claim\":\"CHIRP-NEWCODE\",\"hwid\":\"board-2\"}", "",
+         "key rule: a setup code and a new id (the page's new device) clear the key"},
+        {"{\"claim\":\"CHIRP-NEWCODE\"}", "", "key rule: a setup code alone clears the key"},
+        {"{\"claim\":\"CHIRP-NEWCODE\",\"hwid\":\"board-1\"}", "", "key rule: a setup code with the same id clears the key"},
+        {"{\"token\":\"TOK-TWO\",\"hwid\":\"board-2\"}", "", "key rule: a token with a new id clears the key"},
+        {"{\"hwid\":\"board-2\"}", "", "key rule: a new id alone clears the key"},
+        {std::string("{\"claim\":\"CHIRP-NEWCODE\",\"hwid\":\"board-2\",\"key\":\"") + key2 + "\"}", key2,
+         "key rule: a new device whose push carries a key gets that key"},
+        {"{\"token\":\"TOK-TWO\"}", key, "key rule: a token alone keeps the key"},
+        {"{\"ssid\":\"new\",\"pass\":\"n\"}", key, "key rule: networks alone keep the key"},
+        {std::string("{\"key\":\"") + key2 + "\"}", key2, "key rule: a key alone replaces the key"},
+        {"{\"hwid\":\"board-1\",\"token\":\"TOK-TWO\"}", key, "key rule: the same id with a token keeps the key"},
+        {std::string("{\"token\":\"TOK-TWO\",\"key\":\"") + key2 + "\",\"hwid\":\"board-1\"}", key2,
+         "key rule: a token with its new key (a rotation) gets the new key"},
+    };
+    for (const Case& c : cases) {
+      ProvResult got = push(c.json.c_str(), signedBoard);
+      check(got == ProvResult::Ok && strcmp(merged.key, c.keyAfter) == 0, c.why,
+            std::string("\n      ") + c.json + "\n      key after: \"" + merged.key + "\"");
+    }
+    // A board loads its stored settings as a push onto nothing: the record
+    // carries its own key, so a restart keeps it.
+    char text[1600];
+    size_t tl = settingsToJson(signedBoard, text, sizeof text);
+    Settings loaded;
+    check(tl > 0 && applyPush(text, tl, empty, loaded) == ProvResult::Ok && strcmp(loaded.key, key) == 0,
+          "key rule: the stored settings load with their key");
+  }
+
   // Networks.
   expect("{\"ssid\":\"old\",\"pass\":\"p\",\"aps\":[{\"ssid\":\"old\",\"pass\":\"p\"},{\"ssid\":\"van\",\"pass\":\"\"},"
          "{\"ssid\":\"phone\"}],\"token\":\"T\",\"hwid\":\"h\"}",

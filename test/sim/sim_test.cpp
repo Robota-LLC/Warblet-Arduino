@@ -1432,6 +1432,77 @@ int main() {
     check(m.sendNumber(1) && broker.published.size() == 1, "MQTT: once the session is back, reports go again");
   }
 
+  // 16c. A board that was at Signed, set up again as a new device: the setup
+  // page pushes a setup code and a new id, and no key (a new device has none).
+  // The old key goes, so the new device's reports are not signed with it:
+  // over MQTT that would put 32 HMAC bytes in front of every payload, which a
+  // device with no key stores as part of it.
+  {
+    std::string kept = sim.stored;
+    broker = SimBroker();
+    sim.refusedMark.clear();
+    sim.restarts.clear();
+    const std::string signedSetup = std::string("{\"ssid\":\"lab\",\"pass\":\"pw\",\"token\":\"TOKEN-OLD\",") +
+                                    "\"hwid\":\"sim-old-1\",\"key\":\"" + kKey1 + "\"}";
+    const char* newDevice = "CHIRP+ {\"ssid\":\"lab\",\"pass\":\"pw\",\"claim\":\"CHIRP-NEWCODE\",\"hwid\":\"sim-new-1\"}\r\n";
+    sim.stored = signedSetup;
+    bool signedBefore = false;
+    {
+      Warblet m(Warblet::MQTT);
+      m.begin();
+      m.wait(3000);
+      signedBefore = m.sendNumber(21.5) && broker.published.back().second.size() == 32 + 4;
+      Serial.out.clear();
+      Serial.type(newDevice);
+      m.wait(3000);
+      check(signedBefore && said("CHIRP= ok") && sim.restarts.size() == 1,
+            "key rule: a signed MQTT board takes a new device's setup, and restarts");
+    }
+    Warblet m(Warblet::MQTT);  // as after the restart
+    m.begin();
+    m.wait(3000);
+    broker.published.clear();
+    check(m.sendNumber(21.5) && broker.published.size() == 1 &&
+              broker.published.back().first == "chirp/sim-new-1/up" && broker.published.back().second == "21.5",
+          "key rule: after a new device's setup, MQTT reports are the payload alone (not 32 bytes of the old key's HMAC)");
+    check(sim.stored.find("\"key\"") == std::string::npos, "key rule: ...and the old key is no longer stored");
+
+    // The same over HTTPS: no signature with the old key.
+    sim.stored = signedSetup;
+    sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(202, "Accepted") : answer(204, "No Content"); };
+    {
+      Warblet h;
+      h.begin();
+      h.wait(3000);
+      Serial.type(newDevice);
+      h.wait(3000);
+    }
+    Warblet h;
+    h.begin();
+    h.wait(3000);
+    check(h.sendNumber(1) && sim.requests.back().header("X-Chirp-Token") == "CHIRP-NEWCODE" &&
+              sim.requests.back().header("X-Chirp-Signature").empty() && sim.requests.back().header("X-Chirp-Nonce").empty(),
+          "key rule: over HTTPS too, a new device's reports carry no signature from the old key");
+
+    // A token alone keeps the key (a push the setup page never sends without
+    // the new key, but a person may): still signed.
+    sim.stored = signedSetup;
+    broker = SimBroker();
+    {
+      Warblet t(Warblet::MQTT);
+      t.begin();
+      t.wait(3000);
+      Serial.type("CHIRP+ {\"token\":\"TOKEN-TYPED-BY-HAND\"}\r\n");
+      t.wait(3000);
+      broker.published.clear();
+      check(t.sendNumber(21.5) && broker.published.size() == 1 && broker.published.back().second.size() == 32 + 4,
+            "key rule: a token alone keeps the key, as v1.3's merge says");
+    }
+    sim.stored = kept;
+    sim.restarts.clear();
+    broker = SimBroker();
+  }
+
   // 17. Not on an account, over MQTT (contract v0.47): the broker refuses a
   // CONNECT for an id that is no device with code 4 (its device was deleted,
   // or its setup code was spent). The board stops as it does on HTTPS: no
