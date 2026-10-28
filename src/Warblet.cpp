@@ -212,16 +212,20 @@ void Warblet::begin(const char* wifiName, const char* wifiPassword, const char* 
     return;
   }
   hasKey_ = false;
+  // A setup code other than the stored credential starts a new device, which
+  // has no key yet, whatever its id.
+  bool newClaim = isClaimCode(settings_.credential) &&
+                  strcmp(settings_.credential, scratch_.credential) != 0;
   if (settings_.key[0]) {
     hasKey_ = decodeKey(settings_.key, strlen(settings_.key), key_);
     if (!hasKey_) {
       say("the signing key should be the 44-character key from the device page");
       settings_.clear();
     }
-  } else if (scratch_.key[0] && strcmp(scratch_.hwId, settings_.hwId) == 0) {
+  } else if (scratch_.key[0] && !newClaim && strcmp(scratch_.hwId, settings_.hwId) == 0) {
     // No key typed: the one stored for this device id is used from then on.
-    // Another id, letter case included, is another device, and the key was
-    // not its (the key rule).
+    // Another id, letter case included, or another setup code, is another
+    // device, and the key was not its (the key rule).
     memcpy(settings_.key, scratch_.key, sizeof settings_.key);
     hasKey_ = decodeKey(settings_.key, strlen(settings_.key), key_);
     if (hasKey_) say("using the signing key stored on this board for this device id");
