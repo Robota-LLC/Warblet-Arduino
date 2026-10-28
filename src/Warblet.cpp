@@ -218,9 +218,10 @@ void Warblet::begin(const char* wifiName, const char* wifiPassword, const char* 
       say("the signing key should be the 44-character key from the device page");
       settings_.clear();
     }
-  } else if (scratch_.key[0] && sameHwId(scratch_.hwId, settings_.hwId)) {
+  } else if (scratch_.key[0] && strcmp(scratch_.hwId, settings_.hwId) == 0) {
     // No key typed: the one stored for this device id is used from then on.
-    // Another id is a new device, and the key was not its (the key rule).
+    // Another id, letter case included, is another device, and the key was
+    // not its (the key rule).
     memcpy(settings_.key, scratch_.key, sizeof settings_.key);
     hasKey_ = decodeKey(settings_.key, strlen(settings_.key), key_);
     if (hasKey_) say("using the signing key stored on this board for this device id");
