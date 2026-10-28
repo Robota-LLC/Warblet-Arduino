@@ -1615,6 +1615,51 @@ int main() {
     broker = SimBroker();
   }
 
+  // 16e. restartWhenStuck() over MQTT. An open session is the broker
+  // answering (its keepalive), so the time counts from when the session was
+  // last up, not from when it connected: after a long healthy run the first
+  // drop does not restart the board; ten minutes with no session after it do.
+  {
+    std::string kept = sim.stored;
+    const unsigned long tenMin = 10UL * 60UL * 1000UL;
+    sim.stored = "{\"ssid\":\"lab\",\"pass\":\"pw\",\"token\":\"TOKEN-STUCK\",\"hwid\":\"sim-board-1\"}";
+    sim.refusedMark.clear();
+    for (int fromStart = 0; fromStart < 2; fromStart++) {
+      broker = SimBroker();
+      broker.unreachable = fromStart == 1;
+      sim.restarts.clear();
+      Warblet m(Warblet::MQTT);
+      m.begin();
+      m.restartWhenStuck(tenMin);
+      unsigned long from = millis();
+      if (!fromStart) {
+        for (int i = 0; i < 30; i++) {  // half an hour, healthy, a report a minute
+          m.sendNumber(i);
+          m.wait(60000);
+        }
+        from = millis();
+        broker.unreachable = true;
+        warblet::board::simDropSession();
+      }
+      m.wait(60000);
+      bool early = !sim.restarts.empty();
+      m.wait(tenMin);
+      long at = sim.restarts.empty() ? -1L : (long)(sim.restarts.front() - from);
+      if (fromStart) {
+        check(at >= (long)tenMin && at <= (long)tenMin + 60000,
+              "restartWhenStuck over MQTT: no session since the start: a restart once ten minutes have passed");
+      } else {
+        check(!early, "restartWhenStuck over MQTT: a drop after half an hour of session does not restart the board");
+        check(at >= (long)tenMin && at <= (long)tenMin + 60000,
+              "restartWhenStuck over MQTT: ten minutes with no session after the drop do");
+        printf("      restartWhenStuck over MQTT: restarted %ld s after the session dropped\n", at / 1000);
+      }
+    }
+    broker = SimBroker();
+    sim.restarts.clear();
+    sim.stored = kept;
+  }
+
   // 17. Not on an account, over MQTT (contract v0.47): the broker refuses a
   // CONNECT for an id that is no device with code 4 (its device was deleted,
   // or its setup code was spent). The board stops as it does on HTTPS: no
