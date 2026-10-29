@@ -352,6 +352,18 @@ int main() {
       check(signedSince(at, kKey2, false), "typed settings: the same id with a new token keeps the key (the key rule)");
     }
     {
+      // A setup code typed for the same id, where the board stores a token:
+      // a new device, which Warblet has given no key yet (9c has the same
+      // over a stored setup code).
+      Warblet t;
+      t.begin("lab", "pw", "sim-board-1", "CHIRP-CCCC2345");
+      size_t at = sim.requests.size();
+      t.wait(3000);
+      bool sent = t.sendNumber(1);
+      check(sent && sim.requests.size() > at && sim.requests.back().header("X-Chirp-Signature").empty(),
+            "typed settings: a setup code typed for the same id over a stored token does not use the stored key");
+    }
+    {
       // Device ids are compared byte for byte, as the core looks a device up:
       // SIM-BOARD-1 can be another device than sim-board-1, so it does not
       // use the key stored for sim-board-1.
