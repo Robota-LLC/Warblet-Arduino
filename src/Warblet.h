@@ -198,6 +198,7 @@ class Warblet {
   unsigned long mqttRetryAt_ = 0;
   bool waitingSaid_ = false;
   bool badSlug_ = false;  // demo() was given a slug the setup page cannot use
+  bool badFirmware_ = false;  // firmware() was given a version the setup page cannot use
   bool joinFailSaid_ = false;
   bool clockSet_ = false;
   unsigned long nextPoll_ = 0;

@@ -1,5 +1,5 @@
 {
- "_": "CHIRP-PROV v1.8 test vectors (API_CONTRACT.md, Serial provisioning). One file for rot-guard, every firmware family's host tests and the setup page's parser. caps: objects that are and are not a capability object. announce: lines that carry a capability report (with what it says) and lines that carry none. pushes: a setup push to a responder of a profile, with the settings it holds, the answer it must print, and whether it stores anything; a refused push stores nothing. Every id, code and key here is a test value.",
+ "_": "CHIRP-PROV v1.8 test vectors (the Warblet contract, Serial provisioning). One file for every reader of the protocol: the checks over the demos, every firmware family's host tests and the setup page's parser. caps: objects that are and are not a capability object. announce: lines that carry a capability report (with what it says) and lines that carry none. pushes: a setup push to a responder of a profile, with the settings it holds, the answer it must print, and whether it stores anything; a refused push leaves the settings it holds as they were. Every id, code and key here is a test value.",
  "protocol": "chirp-prov/1.8",
  "keyOrder": [
   "v",
@@ -36,6 +36,10 @@
    {
     "name": "token only (a demo with no signing code)",
     "caps": "{\"v\":1,\"auth\":[1],\"keyProvisioning\":[],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "signed only: auth [2] is legal, and such firmware takes a claim or token too",
+    "caps": "{\"v\":1,\"auth\":[2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
    },
    {
     "name": "signed over UDP (Thread)",
@@ -448,6 +452,19 @@
    "stores": true
   },
   {
+   "name": "a host that is null",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":null}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
    "name": "level is no longer a push field",
    "profile": "token",
    "stored": {
@@ -851,6 +868,30 @@
     "hwid": "board-1"
    },
    "push": "{\"host\":\"https.warbletiot.com\"}",
+   "answer": "CHIRP= err unsupported host",
+   "stores": false
+  },
+  {
+   "name": "Open: an empty host is not its own",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"\"}",
+   "answer": "CHIRP= err unsupported host",
+   "stores": false
+  },
+  {
+   "name": "Open: a null host is not its own",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":null}",
    "answer": "CHIRP= err unsupported host",
    "stores": false
   },

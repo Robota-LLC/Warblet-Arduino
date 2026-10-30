@@ -134,6 +134,16 @@ int main() {
     unnamed.wait(100);
     check(said("CHIRP! v=1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}\r\n") && said("not a demo slug"),
           "board.demo(): a slug that breaks the grammar is left out, and said");
+    // firmware() is called before begin(), and so before Serial.begin(): the
+    // warning waits for begin(), as demo()'s does, or a real board loses it.
+    Warblet unversioned;
+    unversioned.firmware("bad/version");
+    Serial.out.clear();
+    unversioned.begin();
+    Serial.type("CHIRP?\r\n");
+    unversioned.wait(100);
+    check(said("CHIRP! v=1 fw=warblet-arduino-0.2.0 key_set=0 ") && said("firmware(): that is not a version"),
+          "board.firmware(): a version that breaks the grammar is not announced, and said once Serial has begun");
     Serial.out.clear();
   }
 

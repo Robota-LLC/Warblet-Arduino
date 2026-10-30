@@ -92,9 +92,7 @@ void Warblet::demo(const char* slug) {
 }
 
 void Warblet::firmware(const char* version) {
-  if (!setup_.setFirmware(version)) {
-    say("firmware(): that is not a version (1 to 64 of A-Z a-z 0-9 . _ -), so the board says the library's");
-  }
+  badFirmware_ = !setup_.setFirmware(version);  // said in begin(), once Serial has begun
 }
 
 // What this board tells the setup page it can do (CHIRP-PROV v1.8): Token and
@@ -108,6 +106,7 @@ void Warblet::refreshCaps() {
 void Warblet::begin() {
   board::serialBegin(115200);
   if (badSlug_) say("demo(): that is not a demo slug (3 to 40 of a-z, 0-9 and -), so the announce leaves it out");
+  if (badFirmware_) say("firmware(): that is not a version (1 to 64 of A-Z a-z 0-9 . _ -), so the board says the library's");
   started_ = true;
   typed_ = false;
   size_t len = 0;

@@ -1,7 +1,7 @@
 """Write the CHIRP-PROV v1.8 vectors the library is tested against as plain
 lines the C++ tests read, from test/chirp-prov-v1.8.json, the shared vector
-file (a byte copy of the one the Warblet demos' rot-guard and host tests
-read; rot-guard compares the two).
+file (a byte copy of the one the Warblet demos and the setup page are
+tested against; their checks compare the two).
 
     python test/v18_vectors.py test/chirp-prov-v1.8.json OUT_DIR
 
