@@ -695,6 +695,19 @@
    "stores": false
   },
   {
+   "name": "an id of 129 characters, one over the grammar's 128",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
    "name": "nine networks",
    "profile": "token",
    "stored": {
