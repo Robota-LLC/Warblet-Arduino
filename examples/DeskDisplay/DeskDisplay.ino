@@ -25,7 +25,6 @@
 const char* DEMO = "demo-cyd-desk-display-arduino";
 const unsigned long REPORT_EVERY_MS = 30000;  // a report with the Wi-Fi signal; it also shows Warblet the board is there
 const unsigned long CHECK_EVERY_MS = 5000;    // how often to ask Warblet for new messages
-const unsigned long STUCK_MS = 600000;        // Wi-Fi up, yet no answer at all this long: restart
 
 // Tags say what a message is. The first report after a start says hello, so
 // the routine can give a display that just started the last info line again.
@@ -411,7 +410,6 @@ void setup() {
   board.onState(showState);
   board.onCommand(onCommand);
   board.checkCommandsEvery(CHECK_EVERY_MS);
-  board.restartWhenStuck(STUCK_MS);
   board.begin();  // shows the first state, and the waiting text once it is set up
   Serial.println(found);
 }
