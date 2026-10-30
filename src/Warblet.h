@@ -39,6 +39,11 @@ class Warblet {
   // which demo it runs. Call it before begin().
   void demo(const char* slug);
 
+  // Your sketch's version, which the board tells the setup page ("v1.0.0":
+  // 1 to 64 of A-Z a-z 0-9 . _ -, starting with a letter or a digit). A
+  // sketch that names none says "warblet-arduino-" and this library's version.
+  void firmware(const char* version);
+
   // Start with the settings the setup page stored on the board over USB.
   // Returns at once; loop() joins Wi-Fi when the settings are there.
   void begin();
@@ -130,6 +135,7 @@ class Warblet {
   bool sendNumberText(const char* text, size_t length, const char* tag);
   bool ensureOnline();
   bool serviceSetup();
+  void refreshCaps();
   void joinWifi();
   bool post(const uint8_t* bytes, size_t length, const char* tag);
   bool publishMqtt(const uint8_t* bytes, size_t length, const char* tag);

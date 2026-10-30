@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include <string>
+#include <map>
 #include <vector>
 
 #include "../src/warblet/core/json.h"
@@ -804,28 +805,41 @@ void testProv() {
   }
 
   // Announce.
-  char line[200];
-  provAnnounce("sunny-otter-7c2f", nullptr, line, sizeof line);
-  checkStr(line, "CHIRP! v=1 hw=sunny-otter-7c2f radios=wifi sig=1", "announce with an id");
-  provAnnounce("", nullptr, line, sizeof line);
-  checkStr(line, "CHIRP! v=1 radios=wifi sig=1", "announce without an id leaves hw= out");
-  // CHIRP-PROV v1.6: a demo's firmware names its demo, last, as t=<slug>.
-  provAnnounce("sunny-otter-7c2f", "demo-cyd-desk-display-arduino", line, sizeof line);
-  checkStr(line, "CHIRP! v=1 hw=sunny-otter-7c2f radios=wifi sig=1 t=demo-cyd-desk-display-arduino",
-           "announce with the demo's slug, last");
+  // CHIRP-PROV v1.8: v hw fw key_set radios t caps, in that order, caps last.
+  char line[kProvReplyMax + 1];
+  const char* caps = "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,"
+                     "\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}";
+  provAnnounce("sunny-otter-7c2f", "v1.0.0", false, nullptr, caps, line, sizeof line);
+  checkStr(line, std::string("CHIRP! v=1 hw=sunny-otter-7c2f fw=v1.0.0 key_set=0 radios=wifi caps=") + caps,
+           "announce with an id");
+  provAnnounce("", "v1.0.0", true, nullptr, caps, line, sizeof line);
+  checkStr(line, std::string("CHIRP! v=1 fw=v1.0.0 key_set=1 radios=wifi caps=") + caps,
+           "announce without an id leaves hw= out; a key held is key_set=1");
+  // CHIRP-PROV v1.6: a demo's firmware names its demo as t=<slug>, before caps.
+  provAnnounce("sunny-otter-7c2f", "v1.0.0", false, "demo-cyd-desk-display-arduino", caps, line, sizeof line);
+  checkStr(line, std::string("CHIRP! v=1 hw=sunny-otter-7c2f fw=v1.0.0 key_set=0 radios=wifi "
+                             "t=demo-cyd-desk-display-arduino caps=") + caps,
+           "announce with the demo's slug, then caps");
   check(validSlug("demo-xiao-c6") && validSlug("abc") && !validSlug("ab") && !validSlug("Demo-x") &&
             !validSlug("demo x") && !validSlug(std::string(41, 'a').c_str()) && validSlug(std::string(40, 'a').c_str()),
         "a slug is 3 to 40 of a-z, 0-9 and -");
-  provAnnounce("", "Not A Slug", line, sizeof line);
-  checkStr(line, "CHIRP! v=1 radios=wifi sig=1", "a slug that breaks the grammar is left out");
+  provAnnounce("", "v1.0.0", false, "Not A Slug", caps, line, sizeof line);
+  checkStr(line, std::string("CHIRP! v=1 fw=v1.0.0 key_set=0 radios=wifi caps=") + caps,
+           "a slug that breaks the grammar is left out");
 
   // Accepted.
   expect("{\"ssid\":\"workshop\",\"pass\":\"hunter2\",\"claim\":\"CHIRP-ABCDEFGH\",\"hwid\":\"sunny-otter-7c2f\"}",
          ProvResult::Ok, "what the setup page pushes at a fresh board");
   check(strcmp(merged.credential, "CHIRP-ABCDEFGH") == 0, "a claim code is stored where the token goes");
-  expect("{\"ssid\":\"s\",\"pass\":\"\",\"token\":\"T\",\"hwid\":\"h\",\"level\":2,\"thread\":{\"name\":\"n\"},"
-         "\"unknown\":{\"deep\":[1,{\"a\":\"}\"},3]},\"tls\":false,\"t\":\"demo-x\"}",
-         ProvResult::Ok, "unknown keys, nested values and braces inside strings are ignored");
+  // CHIRP-PROV v1.8: a field the library does not act on is refused by
+  // name (the one that sorts first), nested values and braces inside
+  // strings notwithstanding; nothing is merged.
+  {
+    const char* odd = "{\"ssid\":\"s\",\"pass\":\"\",\"token\":\"T\",\"hwid\":\"h\",\"level\":2,\"thread\":{\"name\":\"n\"},"
+                      "\"unknown\":{\"deep\":[1,{\"a\":\"}\"},3]},\"tls\":false,\"t\":\"demo-x\"}";
+    check(applyPush(odd, strlen(odd), empty, merged) != ProvResult::Ok,
+          "unknown keys, nested values and braces inside strings are refused, not ignored");
+  }
   expect("{\"ssid\":\"caf\\u00e9 \\\"guest\\\"\",\"pass\":\"p\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::Ok,
          "escapes and \\u in strings");
   checkStr(merged.ssid, "caf\xc3\xa9 \"guest\"", "...decoded to UTF-8");
@@ -1033,8 +1047,9 @@ void testProv() {
     }
     return last;
   };
-  check(feedLine("CHIRP?\r\n") == ProvResponder::kReply && strcmp(r.reply(), "CHIRP! v=1 radios=wifi sig=1") == 0,
-        "probe with CRLF");
+  check(feedLine("CHIRP?\r\n") == ProvResponder::kReply &&
+            strcmp(r.reply(), "CHIRP! v=1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}") == 0,
+        "probe with CRLF: CHIRP-PROV v1.8's line, the library's version, no key, HTTPS with a key by USB");
   check(feedLine("  CHIRP?  \n") == ProvResponder::kReply, "probe with spaces and a bare LF");
   check(feedLine("temperature 21.5\r\n") == ProvResponder::kNone, "the sketch's own output is ignored");
   check(feedLine("CHIRP! v=1 hw=echo\r\n") == ProvResponder::kNone, "an announce echoed back is ignored");
@@ -1048,7 +1063,7 @@ void testProv() {
   checkStr(r.stored(false), "CHIRP= err store-failed", "not stored: store-failed");
   current = r.pending();
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply &&
-            strcmp(r.reply(), "CHIRP! v=1 hw=board-1 radios=wifi sig=1") == 0,
+            strcmp(r.reply(), "CHIRP! v=1 hw=board-1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}") == 0,
         "after provisioning the announce carries the id");
   check(feedLine("CHIRP+ " + std::string(kProvLineMax, ' ') + "{}\r\n") == ProvResponder::kReply &&
             strcmp(r.reply(), "CHIRP= err bad-json") == 0,
@@ -1056,16 +1071,45 @@ void testProv() {
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply, "and the next line is read normally");
   r.setSlug("demo-cyd-desk-display-arduino");
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply &&
-            strcmp(r.reply(), "CHIRP! v=1 hw=board-1 radios=wifi sig=1 t=demo-cyd-desk-display-arduino") == 0,
-        "the responder announces the slug it was given");
+            strcmp(r.reply(), "CHIRP! v=1 hw=board-1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi t=demo-cyd-desk-display-arduino caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}") == 0,
+        "the responder announces the slug it was given, caps last");
   {
     // The longest of both: a 128-character id and a 40-character slug.
     std::string longId(128, 'b'), longSlug(40, 'c');
     strcpy(current.hwId, longId.c_str());
     r.setSlug(longSlug.c_str());
-    std::string want = "CHIRP! v=1 hw=" + longId + " radios=wifi sig=1 t=" + longSlug;
+    std::string want = "CHIRP! v=1 hw=" + longId + " fw=warblet-arduino-0.2.0 key_set=0 radios=wifi t=" + longSlug +
+                       " caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}";
     check(feedLine("CHIRP?\r\n") == ProvResponder::kReply && want == r.reply(),
           "a 128-character id and a 40-character slug still fit the announce");
+    // A key held: key_set=1. The key itself is never on the line.
+    strcpy(current.key, "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=");
+    check(feedLine("CHIRP?\r\n") == ProvResponder::kReply && strstr(r.reply(), " key_set=1 ") != nullptr &&
+              strstr(r.reply(), current.key) == nullptr,
+          "a stored key: key_set=1, and the key is not on the line");
+    current.key[0] = '\0';
+  }
+  {
+    // CHIRP-PROV v1.8 refusals, over the responder: by name, nothing to store.
+    struct { const char* push; const char* answer; } refusals[] = {
+        {"{\"level\":2}", "CHIRP= err unsupported level"},
+        {"{\"tls\":false}", "CHIRP= err unsupported tls"},
+        {"{\"thread\":{\"dataset\":\"0e08\"}}", "CHIRP= err unsupported thread"},
+        {"{\"tls\":true,\"level\":1}", "CHIRP= err unsupported level"},
+        {"{\"ssid\":5,\"level\":1}", "CHIRP= err unsupported level"},
+        {"{\"two words\":1}", "CHIRP= err bad-json"},
+        {"{\"key\":\"\"}", "CHIRP= err bad-json"},
+        {"{\"token\":\"\"}", "CHIRP= err bad-json"},
+        {"{\"claim\":\"\"}", "CHIRP= err bad-json"},
+    };
+    current.clear();
+    strcpy(current.ssid, "home");
+    strcpy(current.credential, "T");
+    strcpy(current.hwId, "board-1");
+    for (auto& c : refusals) {
+      ProvResponder::Event e = feedLine(std::string("CHIRP+ ") + c.push + "\r\n");
+      check(e == ProvResponder::kReply && strcmp(r.reply(), c.answer) == 0, "v1.8 refusal", c.push);
+    }
   }
 }
 
@@ -1100,6 +1144,104 @@ std::string canonical(const Settings& s) {
   return std::string(buf, w.done());
 }
 
+// The shared CHIRP-PROV v1.8 vectors (test/chirp-prov-v1.8.json, through
+// test/v18_vectors.py): every push of the token profile, the library's,
+// through the responder as the setup page's line would come.
+void testProvV18(const char* path) {
+  group("prov-v18");
+  FILE* f = fopen(path, "r");
+  if (!f) {
+    check(false, "open the v1.8 vectors (run test/v18_vectors.py)", path);
+    return;
+  }
+  static char line[8192];
+  int n = 0;
+  while (fgets(line, sizeof line, f)) {
+    std::vector<std::string> fld;
+    std::string l(line);
+    while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) l.pop_back();
+    size_t start = 0;
+    for (size_t tab; (tab = l.find('\t', start)) != std::string::npos; start = tab + 1) fld.push_back(l.substr(start, tab - start));
+    fld.push_back(l.substr(start));
+    if (fld.size() != 4) {
+      check(false, "vector line has four fields", l);
+      continue;
+    }
+    Settings stored, scratch, empty;
+    stored.clear();
+    empty.clear();
+    if (fld[0] != "{}") {
+      check(applyPush(fld[0].data(), fld[0].size(), empty, stored) == ProvResult::Ok, "stored settings load", fld[0]);
+    }
+    ProvResponder r(scratch);
+    ProvResponder::Event e = ProvResponder::kNone;
+    std::string text = "CHIRP+ " + fld[1] + "\r\n";
+    for (char ch : text) {
+      ProvResponder::Event got = r.feed(ch, stored);
+      if (got != ProvResponder::kNone) e = got;
+    }
+    std::string answer = e == ProvResponder::kStore ? r.stored(true) : (e == ProvResponder::kReply ? r.reply() : "none");
+    checkStr(answer, fld[2], ("v1.8 answer: " + fld[1]).c_str());
+    check((e == ProvResponder::kStore) == (fld[3] == "1"), "stored only when ok", fld[1]);
+    n++;
+  }
+  fclose(f);
+  check(n >= 25, "the v1.8 vectors hold the token profile's pushes");
+  printf("      %d v1.8 pushes answered as the contract says\n", n);
+}
+
+// The library's capability objects are the shared vectors' own, byte for
+// byte; fw=, the library's version and the 512-byte bound.
+void testCapsV18(const char* path) {
+  group("caps-v18");
+  std::map<std::string, std::string> named;
+  if (FILE* f = fopen(path, "r")) {
+    static char line[1024];
+    while (fgets(line, sizeof line, f)) {
+      std::string l(line);
+      while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) l.pop_back();
+      size_t tab = l.find('\t');
+      if (tab != std::string::npos) named[l.substr(0, tab)] = l.substr(tab + 1);
+    }
+    fclose(f);
+  }
+  char caps[kProvCapsMax + 1];
+  provCaps(false, false, caps, sizeof caps);
+  checkStr(caps, named["token and signed over HTTPS, key by USB (the MicroPython HTTPS demos)"],
+           "HTTPS, no command function: the vectors' token-and-signed object");
+  provCaps(false, true, caps, sizeof caps);
+  checkStr(caps, named["key by USB or a first key on an HTTPS command check (the Arduino library over HTTPS with onCommand)"],
+           "HTTPS with a command function: the vectors' https-bootstrap object");
+  provCaps(true, true, caps, sizeof caps);
+  check(strstr(caps, "https-bootstrap") == nullptr && strstr(caps, "\"transports\":[\"mqtts\"]") != nullptr,
+        "MQTT: mqtts, and no https-bootstrap even with a command function");
+  check(validFirmware("v1.6.0") && validFirmware("warblet-arduino-0.2.0") && validFirmware(std::string(64, 'a').c_str()) &&
+            !validFirmware("") && !validFirmware(".v1") && !validFirmware("bad/version") && !validFirmware("v 1") &&
+            !validFirmware(std::string(65, 'a').c_str()) && !validFirmware(nullptr),
+        "fw=: 1 to 64 of A-Z a-z 0-9 . _ -, starting with a letter or a digit");
+  std::string version;
+  if (FILE* f = fopen("library.properties", "r")) {
+    static char line[256];
+    while (fgets(line, sizeof line, f)) {
+      if (strncmp(line, "version=", 8) == 0) {
+        version = line + 8;
+        while (!version.empty() && (version.back() == '\n' || version.back() == '\r')) version.pop_back();
+      }
+    }
+    fclose(f);
+  }
+  checkStr(kLibraryFirmware, "warblet-arduino-" + version, "the default fw= is the library's version in library.properties");
+  // The longest line: a 128-character id, a 64-character version, a 40-character
+  // slug and the largest capability object still fit 512.
+  std::string longest = named["the largest legal object, 182 bytes"];
+  char out[kProvReplyMax + 1];
+  size_t n = provAnnounce(std::string(128, 'h').c_str(), std::string(64, 'f').c_str(), true,
+                          std::string(40, 's').c_str(), longest.c_str(), out, sizeof out);
+  check(n > 0 && n <= kProvReplyMax && strlen(out) == n, "the longest legal announce fits 512 bytes", std::to_string(n));
+  check(provAnnounce("h", "f", false, "", std::string(600, 'c').c_str(), out, sizeof out) == 0,
+        "a line over 512 bytes is not built");
+}
+
 void testProvDemo(const char* path) {
   group("prov-demo");
   FILE* f = fopen(path, "r");
@@ -1108,7 +1250,7 @@ void testProvDemo(const char* path) {
     return;
   }
   static char line[8192];
-  int same = 0, stricter = 0;
+  int same = 0, stricter = 0, v18 = 0;
   while (fgets(line, sizeof line, f)) {
     if (line[0] == '#') continue;
     std::vector<std::string> fld;
@@ -1135,6 +1277,11 @@ void testProvDemo(const char* path) {
       checkStr(got, "CHIRP= err bad-json", ("documented stricter: " + fld[1]).c_str());
       continue;
     }
+    if (fld[4].rfind("v1.8=", 0) == 0) {  // CHIRP-PROV v1.8 answers this one differently
+      v18++;
+      checkStr(got, fld[4].substr(5), ("CHIRP-PROV v1.8: " + fld[1]).c_str());
+      continue;
+    }
     same++;
     checkStr(got, fld[2], ("answer equals chirp_prov.py: " + fld[1]).c_str());
     if (r == ProvResult::Ok && fld[3] != "-") {
@@ -1143,8 +1290,8 @@ void testProvDemo(const char* path) {
   }
   fclose(f);
   check(same >= 30 && stricter >= 8, "the vectors file holds the expected cases");
-  printf("      %d pushes answered as chirp_prov.py answers them; %d documented stricter cases refused\n", same,
-         stricter);
+  printf("      %d pushes answered as chirp_prov.py answers them; %d documented stricter cases refused; %d as "
+         "CHIRP-PROV v1.8 answers them\n", same, stricter, v18);
 }
 
 }  // namespace
@@ -1152,6 +1299,7 @@ void testProvDemo(const char* path) {
 int main(int argc, char** argv) {
   const char* vectors = argc > 1 ? argv[1] : "test/vectors.txt";
   const char* provVectors = argc > 2 ? argv[2] : "test/prov_vectors.txt";
+  const char* v18 = argc > 3 ? argv[3] : "test/build/v18_pushes.txt";
   groups.reserve(16);  // cur points into this vector
   testSha256();
   testHmac();
@@ -1161,6 +1309,8 @@ int main(int argc, char** argv) {
   testWire();
   testProv();
   testProvDemo(provVectors);
+  testProvV18(v18);
+  testCapsV18(argc > 4 ? argv[4] : "test/build/v18_caps.txt");
   int pass = 0, fail = 0;
   printf("\n%-10s %5s %5s\n", "group", "pass", "fail");
   for (auto& g : groups) {

@@ -1,6 +1,7 @@
 // CHIRP-PROV, the USB setup protocol the Warblet setup page speaks (contract
-// §Serial provisioning, v1.6): answer "CHIRP?" with an announce, and apply a
-// "CHIRP+ <json>" push as a merge onto the stored settings. The rules follow
+// §Serial provisioning, v1.8): answer "CHIRP?" with an announce that says what
+// this firmware can do, and apply a "CHIRP+ <json>" push as a merge onto the
+// stored settings, refusing any field the library does not act on. The rules follow
 // the public MicroPython demos' chirp_prov.py; where this file is stricter it
 // says so. Portable C++, no Arduino headers, no heap. Host-tested (test/).
 #pragma once
@@ -12,6 +13,12 @@ namespace warblet {
 
 static const size_t kMaxNetworks = 8;  // CHIRP-PROV v1.1: at most 8 networks
 static const size_t kProvLineMax = 2048;
+static const size_t kProvReplyMax = 512;  // CHIRP-PROV v1.8: the longest line a board prints
+static const size_t kProvCapsMax = 256;   // ... and the longest capability object
+static const size_t kFirmwareMax = 64;    // fw=: 1 to 64 of A-Z a-z 0-9 . _ -
+// The version a sketch announces when it names none (board.firmware()):
+// "warblet-arduino-" and this library's version, as library.properties has it.
+static const char kLibraryFirmware[] = "warblet-arduino-0.2.0";
 
 struct Network {
   char ssid[33];  // 802.11 allows 32 bytes
@@ -40,13 +47,21 @@ struct Settings {
   bool network(size_t i, const char** ssidOut, const char** passOut) const;
 };
 
-enum class ProvResult { Ok, BadJson, MissingField, StoreFailed };
+enum class ProvResult { Ok, BadJson, MissingField, StoreFailed, Unsupported };
 
-// "CHIRP= ok", "CHIRP= err bad-json", ...
+// "CHIRP= ok", "CHIRP= err bad-json", ... ("CHIRP= err unsupported" without the
+// field name, which ProvResponder adds.)
 const char* provResultLine(ProvResult r);
 
 // Merge one push onto stored, writing the result to merged (which may not be
 // the same object as stored). Only Ok means merged is complete and valid.
+// CHIRP-PROV v1.8: the library acts on ssid, pass, aps, claim, token, hwid,
+// host and key, and nothing else. Any other field makes the push Unsupported,
+// and the name of the one that sorts first (byte by byte) is written to
+// refused; a name that is not 1 to 32 of A-Z a-z 0-9 _ . - cannot be named and
+// is bad-json. The answers come in the contract's order: not one JSON object,
+// then a field it does not act on, then a bad value (an empty claim, token or
+// key among them), then missing-field.
 // A push that carries a setup code ("claim"), or an id other than the stored
 // one, starts a new device: the stored signing key is dropped unless the same
 // push carries "key". Stored settings load as a push onto empty settings, and
@@ -57,7 +72,8 @@ const char* provResultLine(ProvResult r);
 //   - a non-empty key must be 44 base64 characters that decode to 32 bytes
 //     (the rule the bare-metal C demo's own tests apply);
 //   - more than 8 networks is bad-json (chirp_prov.py also refuses it).
-ProvResult applyPush(const char* json, size_t len, const Settings& stored, Settings& merged);
+ProvResult applyPush(const char* json, size_t len, const Settings& stored, Settings& merged,
+                     char* refused = nullptr, size_t refusedCap = 0);
 
 // Settings as one JSON object, the same shape as a push, for storage. Loading
 // is applyPush() of that text onto empty settings. Returns the length, or 0
@@ -74,10 +90,22 @@ void setupFingerprint(const Settings& s, char out[17]);
 // A demo's slug, as the setup page names demos: 3 to 40 of a-z, 0-9 and -.
 bool validSlug(const char* slug);
 
-// "CHIRP! v=1 hw=<id> radios=wifi sig=1 t=<slug>": hw= left out when there is
-// no id, t= when there is no slug or it breaks the grammar (CHIRP-PROV v1.6:
-// the demo this firmware is, which the setup page waits for).
-size_t provAnnounce(const char* hwId, const char* slug, char* out, size_t cap);
+// A firmware version as fw= takes it: 1 to 64 of A-Z a-z 0-9 . _ -, starting
+// with a letter or a digit.
+bool validFirmware(const char* fw);
+
+// The capability object (CHIRP-PROV v1.8), compact, keys in the contract's
+// order: Token and Signed; the key over USB, and also a first key on an HTTPS
+// command check when bootstrap is set; no over-the-air rotation or update;
+// the transport, https or mqtts. Returns the length, or 0 if it does not fit.
+size_t provCaps(bool mqtts, bool bootstrap, char* out, size_t cap);
+
+// "CHIRP! v=1 hw=<id> fw=<fw> key_set=<0|1> radios=wifi t=<slug> caps=<caps>"
+// (CHIRP-PROV v1.8): hw= left out when there is no id, t= when there is no
+// slug or it breaks the grammar; caps= always last. Returns the length, or 0
+// if it does not fit cap or the contract's 512.
+size_t provAnnounce(const char* hwId, const char* fw, bool keySet, const char* slug, const char* caps,
+                    char* out, size_t cap);
 
 // Reads the serial line one character at a time and decides what to answer.
 // Lines that do not start with CHIRP are the sketch's own and are ignored.
@@ -88,12 +116,17 @@ class ProvResponder {
     kReply,  // print reply() as one line
     kStore,  // store pending(); then print stored(true or false) as one line
   };
-  explicit ProvResponder(Settings& scratch) : pending_(scratch) {}
+  explicit ProvResponder(Settings& scratch);
   Event feed(char c, const Settings& current);
   const char* reply() const { return reply_; }
   const Settings& pending() const { return pending_; }
   // The demo slug the announce carries; "" (the default) for none.
   void setSlug(const char* slug);
+  // The version the announce carries (kLibraryFirmware unless set); false,
+  // and no change, for one that breaks the fw= grammar.
+  bool setFirmware(const char* fw);
+  // The capability object the announce carries (provCaps(false, false) unless set).
+  void setCaps(const char* caps);
   const char* stored(bool ok) const { return provResultLine(ok ? ProvResult::Ok : ProvResult::StoreFailed); }
 
  private:
@@ -102,10 +135,13 @@ class ProvResponder {
   char buf_[kProvLineMax + 1];
   size_t len_ = 0;
   bool overflow_ = false;
-  // The longest reply is the announce: "CHIRP! v=1", " hw=" and a 128-byte
-  // id, " radios=wifi sig=1", and " t=" with a 40-byte slug.
-  char reply_[10 + 4 + 128 + 18 + 3 + 40 + 1];
+  // The longest reply is the announce, at most 512 bytes (CHIRP-PROV v1.8):
+  // a 128-byte id, a 64-byte version, a 40-byte slug and the capability
+  // object take about 450.
+  char reply_[kProvReplyMax + 1];
   char slug_[41] = "";
+  char fw_[kFirmwareMax + 1];
+  char caps_[kProvCapsMax + 1];
 };
 
 }  // namespace warblet

@@ -124,15 +124,15 @@ int main() {
     Serial.out.clear();
     Serial.type("CHIRP?\r\n");
     named.wait(100);
-    check(said("CHIRP! v=1 radios=wifi sig=1 t=demo-cyd-desk-display-arduino\r\n"),
-          "board.demo(): the announce carries t=<slug>");
+    check(said("CHIRP! v=1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi t=demo-cyd-desk-display-arduino caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}\r\n"),
+          "board.demo(): the announce carries t=<slug>; no command function, so no key over the air");
     Warblet unnamed;
     unnamed.demo("Not A Slug");
     Serial.out.clear();
     unnamed.begin();
     Serial.type("CHIRP?\r\n");
     unnamed.wait(100);
-    check(said("CHIRP! v=1 radios=wifi sig=1\r\n") && said("not a demo slug"),
+    check(said("CHIRP! v=1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}\r\n") && said("not a demo slug"),
           "board.demo(): a slug that breaks the grammar is left out, and said");
     Serial.out.clear();
   }
@@ -164,8 +164,15 @@ int main() {
   // 2. The setup page probes and pushes, as the contract's CHIRP-PROV does.
   Serial.type("CHIRP?\r\n");
   run(1);
-  check(said("CHIRP! v=1 radios=wifi sig=1\r\n"), "announce answered, no id yet");
+  // LightByCommand: its version, and over HTTPS with a command function a
+  // first key may also arrive on a command check (https-bootstrap).
+  check(said("CHIRP! v=1 fw=v0.2.0 key_set=0 radios=wifi caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\",\"https-bootstrap\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}\r\n"),
+        "announce answered, no id yet: CHIRP-PROV v1.8's line");
+  // v1.8: level is no longer a push field; the board refuses it by name.
   Serial.type("CHIRP+ {\"ssid\":\"lab\",\"pass\":\"pw\",\"claim\":\"CHIRP-TESTCODE\",\"hwid\":\"sim-board-1\",\"level\":1}\r\n");
+  run(3);
+  check(said("CHIRP= err unsupported level\r\n") && sim.stored.empty(), "a push with level is refused, and nothing stored");
+  Serial.type("CHIRP+ {\"ssid\":\"lab\",\"pass\":\"pw\",\"claim\":\"CHIRP-TESTCODE\",\"hwid\":\"sim-board-1\"}\r\n");
   run(3);  // the line arrives over a few milliseconds
   check(said("CHIRP= ok\r\n"), "push answered ok");
   check(sim.stored.find("\"hwid\":\"sim-board-1\"") != std::string::npos &&
@@ -247,19 +254,23 @@ int main() {
   check(badSignatures == 0, "every signature verifies against the contract's signed input");
   check(increasing, "nonces strictly increase across uplinks and polls");
 
-  // 6. A key frame over the air replaces the key; the next report uses it.
+  // 6. A key frame over the air while a key is held is dropped: https-bootstrap
+  // stores a first key only, never a replacement (CHIRP-PROV v1.8). The
+  // board goes on signing with the key it has.
   queued = std::string("CHIRPKEY1 ") + kKey2 + "\n";
   run(110);
-  check(sim.stored.find(kKey2) != std::string::npos, "key frame stored");
-  check(said("a signing key arrived over the air and was stored"), "says so");
+  check(sim.stored.find(kKey2) == std::string::npos && sim.stored.find(kKey1) != std::string::npos,
+        "a key frame while a key is held is not stored");
+  check(said("a signing key arrived over the air and was dropped: this board already holds one"), "says so");
+  check(!said(kKey2), "and never prints the key");
   queued = "led:on";
   before = sim.requests.size();
   run(110);
-  bool newKeyUsed = false;
+  bool oldKeyUsed = false;
   for (size_t i = before; i < sim.requests.size(); i++) {
-    if (isUplink(sim.requests[i]) && signatureOk(sim.requests[i], kKey2)) newKeyUsed = true;
+    if (isUplink(sim.requests[i]) && signatureOk(sim.requests[i], kKey1)) oldKeyUsed = true;
   }
-  check(newKeyUsed, "the report after the key frame is signed with the new key");
+  check(oldKeyUsed, "the report after the dropped frame is still signed with the held key");
 
   // 7. Refusals are said aloud.
   check(!board.sendTenths(5000), "sendTenths(5000) is refused");
@@ -288,7 +299,8 @@ int main() {
   sim.server = [&](const SimRequest& r) { return isUplink(r) ? answer(202, "Accepted") : answer(204, "No Content"); };
   before = sim.requests.size();
   check(again.sendText("hi", "boot"), "a fresh instance sends");
-  check(sim.requests.size() > before && signatureOk(sim.requests.back(), kKey2), "...signed with the stored key");
+  check(sim.requests.size() > before && signatureOk(sim.requests.back(), kKey1),
+        "...signed with the stored key (the one from USB: the frame over the air was dropped)");
 
   // 9. The typed-in alternative never answers the setup page.
   Warblet typed;
@@ -468,7 +480,7 @@ int main() {
     Serial.out.clear();
     Serial.type("CHIRP?\r\n");
     w.loop();
-    check(said("CHIRP! v=1 hw=sim-board-1 radios=wifi sig=1"), "probe answered");
+    check(said("CHIRP! v=1 hw=sim-board-1 fw=warblet-arduino-0.2.0 key_set=1 radios=wifi caps="), "probe answered, a key held");
     size_t at = sim.requests.size();
     for (int i = 0; i < 450; i++) { w.loop(); delay(20); }  // 9 s
     check(sim.requests.size() == at, "no request runs in the 10 s after the probe is answered");
@@ -1577,8 +1589,13 @@ int main() {
     m.wait(3000);
     check(broker.host == "mqtt.warbletiot.com" && m.connected(), "MQTT: pushing no host goes back to the built-in one");
 
-    // At Token (no key): the payload alone, untagged topic.
+    // At Token (no key): the payload alone, untagged topic. A key "" is
+    // refused (CHIRP-PROV v1.8); a push that starts a new device clears it.
+    Serial.out.clear();
     Serial.type("CHIRP+ {\"key\":\"\"}\r\n");
+    m.wait(500);
+    check(said("CHIRP= err bad-json"), "MQTT: key \"\" is refused, and the key stays");
+    Serial.type("CHIRP+ {\"claim\":\"CHIRP-MQTTTOKEN\"}\r\n");
     m.wait(3000);
     check(m.sendNumber(21.5) && broker.published.back().first == "chirp/sim-board-1/up" &&
               broker.published.back().second == "21.5",
@@ -1869,6 +1886,26 @@ int main() {
     check(sent && broker.subscribe == "chirp/" + id + "/down" && !broker.published.empty() &&
               broker.published.back().first == "chirp/" + id + "/up/" + tag,
           "MQTT: a 128-character id and a 32-character tag give whole topics, down and up");
+  }
+
+  // 19. Over MQTT a signing-key frame is never stored, even with no key held:
+  // https-bootstrap is HTTPS only (CHIRP-PROV v1.8), so the board drops it.
+  {
+    broker = SimBroker();
+    sim.refusedMark.clear();
+    std::string storedBefore = sim.stored;
+    Warblet m(Warblet::MQTT);
+    m.begin("lab", "pw", "sim-mqtt-nokey", "TOKEN-MQTT");
+    m.onCommand(recordCommand);
+    m.wait(3000);
+    Serial.out.clear();
+    recorded.clear();
+    broker.inbox.push_back(std::string("CHIRPKEY1 ") + kKey2 + "\n");
+    m.wait(200);
+    check(sim.stored == storedBefore && recorded.empty(), "MQTT: a key frame is not stored, and not handed to the sketch");
+    check(said("a signing key arrived over MQTT and was dropped: a key is taken over HTTPS or USB only"),
+          "MQTT: the dropped key frame is said");
+    check(!said(kKey2), "MQTT: the key is never printed");
   }
 
   printf("\nsim: %d passed, %d failed\n%s\n", pass, fail, fail ? "FAILED" : "PASSED");

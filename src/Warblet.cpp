@@ -91,6 +91,20 @@ void Warblet::demo(const char* slug) {
   setup_.setSlug(slug);
 }
 
+void Warblet::firmware(const char* version) {
+  if (!setup_.setFirmware(version)) {
+    say("firmware(): that is not a version (1 to 64 of A-Z a-z 0-9 . _ -), so the board says the library's");
+  }
+}
+
+// What this board tells the setup page it can do (CHIRP-PROV v1.8): Token and
+// Signed, the key over USB, the transport it was built for, and, over HTTPS
+// with a command function, a first key on a command check (https-bootstrap).
+void Warblet::refreshCaps() {
+  char caps[kProvCapsMax + 1];
+  if (provCaps(mqtt_ != nullptr, handler_ != nullptr, caps, sizeof caps) > 0) setup_.setCaps(caps);
+}
+
 void Warblet::begin() {
   board::serialBegin(115200);
   if (badSlug_) say("demo(): that is not a demo slug (3 to 40 of a-z, 0-9 and -), so the announce leaves it out");
@@ -304,6 +318,7 @@ void Warblet::wait(unsigned long ms) {
 bool Warblet::serviceSetup() {
   if (typed_) return false;  // the settings live in the sketch
   bool changed = false;
+  if (Serial.available() > 0) refreshCaps();
   while (Serial.available() > 0) {
     int c = Serial.read();
     if (c < 0) break;
@@ -622,6 +637,17 @@ void Warblet::deliverCommand(size_t len) {
       return;
     case Downlink::Key: {
       // The platform hands a board its signing key this way, only over TLS.
+      // The library keeps a FIRST key only, and only from an HTTPS command
+      // check (https-bootstrap, CHIRP-PROV v1.8): never over MQTT, and never
+      // in place of a key it holds, which would be a rotation nobody staged.
+      if (mqtt_ != nullptr) {
+        say("a signing key arrived over MQTT and was dropped: a key is taken over HTTPS or USB only");
+        return;
+      }
+      if (settings_.key[0] != '\0') {
+        say("a signing key arrived over the air and was dropped: this board already holds one");
+        return;
+      }
       char b64[45];
       if (!parseKeyFrame(commandBody, len, b64)) {
         say("a signing-key frame arrived malformed and was ignored");

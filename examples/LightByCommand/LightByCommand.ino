@@ -61,6 +61,7 @@ void command(String text) {
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   setLed(false);                        // start with the LED out
+  board.firmware("v0.2.0");             // this sketch's version, which the board tells the setup page
   board.begin();
   board.onCommand(command);             // run command() when one arrives
 }

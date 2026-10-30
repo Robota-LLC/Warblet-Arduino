@@ -29,6 +29,7 @@ void (Warblet::*const kLoop)() = &Warblet::loop;
 void (Warblet::*const kWait)(unsigned long) = &Warblet::wait;
 void (Warblet::*const kDemo)(const char*) = &Warblet::demo;
 void (Warblet::*const kOnCommand)(Warblet::CommandHandler) = &Warblet::onCommand;
+void (Warblet::*const kFirmware)(const char*) = &Warblet::firmware;
 void (Warblet::*const kCheckCommandsEvery)(unsigned long) = &Warblet::checkCommandsEvery;
 void (Warblet::*const kRestartWhenStuck)(unsigned long) = &Warblet::restartWhenStuck;
 bool (Warblet::*const kConnected)() = &Warblet::connected;
@@ -55,6 +56,7 @@ void sketch() {
   Warblet board;
   Warblet mqtt(Warblet::MQTT);
   board.demo("demo-example");
+  board.firmware("v1.0.0");
   board.onCommand(command);
   board.onState(state);
   board.checkCommandsEvery(5000);

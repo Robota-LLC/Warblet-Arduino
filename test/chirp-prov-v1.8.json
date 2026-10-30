@@ -1,0 +1,877 @@
+{
+ "_": "CHIRP-PROV v1.8 test vectors (API_CONTRACT.md, Serial provisioning). One file for rot-guard, every firmware family's host tests and the setup page's parser. caps: objects that are and are not a capability object. announce: lines that carry a capability report (with what it says) and lines that carry none. pushes: a setup push to a responder of a profile, with the settings it holds, the answer it must print, and whether it stores anything; a refused push stores nothing. Every id, code and key here is a test value.",
+ "protocol": "chirp-prov/1.8",
+ "keyOrder": [
+  "v",
+  "auth",
+  "keyProvisioning",
+  "otaKeyRotation",
+  "otaFirmwareUpdate",
+  "transports"
+ ],
+ "bounds": {
+  "caps": 256,
+  "line": 512
+ },
+ "fwPattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+ "fieldNamePattern": "^[A-Za-z0-9_.-]{1,32}$",
+ "caps": {
+  "valid": [
+   {
+    "name": "token and signed over HTTPS, key by USB (the MicroPython HTTPS demos)",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "open over plain HTTP (the Open starter)",
+    "caps": "{\"v\":1,\"auth\":[0],\"keyProvisioning\":[],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"http\"]}"
+   },
+   {
+    "name": "key by USB or a first key on an HTTPS command check (the Arduino library over HTTPS with onCommand)",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\",\"https-bootstrap\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "both MQTT routes (a firmware with a TLS switch)",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"mqtt\",\"mqtts\"]}"
+   },
+   {
+    "name": "token only (a demo with no signing code)",
+    "caps": "{\"v\":1,\"auth\":[1],\"keyProvisioning\":[],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "signed over UDP (Thread)",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"udp\"]}"
+   },
+   {
+    "name": "the largest legal object, 182 bytes",
+    "caps": "{\"v\":1,\"auth\":[0,1,2],\"keyProvisioning\":[\"usb\",\"https-bootstrap\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"http\",\"https\",\"mqtt\",\"mqtts\",\"tcp\",\"tls-tcp\",\"udp\"]}"
+   },
+   {
+    "name": "both over-the-air flags may be true where the whole protocol exists",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":true,\"otaFirmwareUpdate\":true,\"transports\":[\"https\"]}"
+   }
+  ],
+  "invalid": [
+   {
+    "name": "v is not 1",
+    "caps": "{\"v\":2,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "auth is empty",
+    "caps": "{\"v\":1,\"auth\":[],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "auth repeats a value",
+    "caps": "{\"v\":1,\"auth\":[1,1],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "auth holds a boolean",
+    "caps": "{\"v\":1,\"auth\":[true,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "auth holds 3",
+    "caps": "{\"v\":1,\"auth\":[3],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "an unknown key",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"],\"token\":\"x\"}"
+   },
+   {
+    "name": "a key is missing",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "a key twice",
+    "caps": "{\"v\":1,\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "transports is empty",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[]}"
+   },
+   {
+    "name": "an unknown transport",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\",\"coap\"]}"
+   },
+   {
+    "name": "an unknown key route",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"ota-rotation\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "a key route without Signed",
+    "caps": "{\"v\":1,\"auth\":[0],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "https-bootstrap without https",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"https-bootstrap\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"mqtts\"]}"
+   },
+   {
+    "name": "an over-the-air flag as text",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":\"true\",\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "an over-the-air flag as a number",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":1,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "key rotation over a plain route only",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":true,\"otaFirmwareUpdate\":false,\"transports\":[\"http\"]}"
+   },
+   {
+    "name": "key rotation without Signed",
+    "caps": "{\"v\":1,\"auth\":[1],\"keyProvisioning\":[],\"otaKeyRotation\":true,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "a number written 1.0",
+    "caps": "{\"v\":1,\"auth\":[1.0,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "a number written 1e0",
+    "caps": "{\"v\":1e0,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "a space inside",
+    "caps": "{\"v\":1, \"auth\":[1, 2], \"keyProvisioning\":[\"usb\"], \"otaKeyRotation\":false, \"otaFirmwareUpdate\":false, \"transports\":[\"https\"]}"
+   },
+   {
+    "name": "an escape inside",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"htt\\u0070s\"]}"
+   },
+   {
+    "name": "not an object",
+    "caps": "[1,2]"
+   },
+   {
+    "name": "over 256 bytes",
+    "caps": "{\"v\":1,\"auth\":[0,1,2],\"keyProvisioning\":[\"usb\",\"https-bootstrap\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"http\",\"https\",\"mqtt\",\"mqtts\",\"tcp\",\"tls-tcp\",\"udp\"],\"x\":\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\"}"
+   }
+  ]
+ },
+ "announce": {
+  "valid": [
+   {
+    "name": "a demo with a stored key",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=1 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}",
+    "report": {
+     "v": 1,
+     "hw": "test-device",
+     "fw": "v1.6.0",
+     "key_set": 1,
+     "radios": [
+      "wifi"
+     ],
+     "t": "demo-olimex-c3",
+     "caps": {
+      "v": 1,
+      "auth": [
+       1,
+       2
+      ],
+      "keyProvisioning": [
+       "usb"
+      ],
+      "otaKeyRotation": false,
+      "otaFirmwareUpdate": false,
+      "transports": [
+       "https"
+      ]
+     }
+    }
+   },
+   {
+    "name": "a demo not set up yet: hw= is empty",
+    "line": "CHIRP! v=1 hw= fw=v1.6.0 key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}",
+    "report": {
+     "v": 1,
+     "hw": "",
+     "fw": "v1.6.0",
+     "key_set": 0,
+     "radios": [
+      "wifi"
+     ],
+     "t": "demo-olimex-c3",
+     "caps": {
+      "v": 1,
+      "auth": [
+       1,
+       2
+      ],
+      "keyProvisioning": [
+       "usb"
+      ],
+      "otaKeyRotation": false,
+      "otaFirmwareUpdate": false,
+      "transports": [
+       "https"
+      ]
+     }
+    }
+   },
+   {
+    "name": "the Open starter",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 radios=wifi t=demo-open-starter caps={\"v\":1,\"auth\":[0],\"keyProvisioning\":[],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"http\"]}",
+    "report": {
+     "v": 1,
+     "hw": "test-device",
+     "fw": "v1.6.0",
+     "key_set": 0,
+     "radios": [
+      "wifi"
+     ],
+     "t": "demo-open-starter",
+     "caps": {
+      "v": 1,
+      "auth": [
+       0
+      ],
+      "keyProvisioning": [],
+      "otaKeyRotation": false,
+      "otaFirmwareUpdate": false,
+      "transports": [
+       "http"
+      ]
+     }
+    }
+   },
+   {
+    "name": "a sketch that names no demo and has no id: no hw=, no t=",
+    "line": "CHIRP! v=1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\",\"https-bootstrap\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}",
+    "report": {
+     "v": 1,
+     "hw": "",
+     "fw": "warblet-arduino-0.2.0",
+     "key_set": 0,
+     "radios": [
+      "wifi"
+     ],
+     "t": "",
+     "caps": {
+      "v": 1,
+      "auth": [
+       1,
+       2
+      ],
+      "keyProvisioning": [
+       "usb",
+       "https-bootstrap"
+      ],
+      "otaKeyRotation": false,
+      "otaFirmwareUpdate": false,
+      "transports": [
+       "https"
+      ]
+     }
+    }
+   },
+   {
+    "name": "a Thread board announces v=2",
+    "line": "CHIRP! v=2 hw=test-device fw=v1.6.0 key_set=0 radios=thread t=demo-nucleo-wba65-thread caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"udp\"]}",
+    "report": {
+     "v": 2,
+     "hw": "test-device",
+     "fw": "v1.6.0",
+     "key_set": 0,
+     "radios": [
+      "thread"
+     ],
+     "t": "demo-nucleo-wba65-thread",
+     "caps": {
+      "v": 1,
+      "auth": [
+       1,
+       2
+      ],
+      "keyProvisioning": [
+       "usb"
+      ],
+      "otaKeyRotation": false,
+      "otaFirmwareUpdate": false,
+      "transports": [
+       "udp"
+      ]
+     }
+    }
+   }
+  ],
+  "invalid": [
+   {
+    "name": "v1.7: sig=1 and no capability report",
+    "line": "CHIRP! v=1 hw=test-device radios=wifi sig=1 t=demo-olimex-c3"
+   },
+   {
+    "name": "caps twice",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]} caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "fw twice",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 fw=v1.6.1 key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "key_set twice",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 key_set=1 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "key_set is not 0 or 1",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=true radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "key_set=1 without Signed in auth",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=1 radios=wifi t=demo-x caps={\"v\":1,\"auth\":[1],\"keyProvisioning\":[],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "fw holds a slash",
+    "line": "CHIRP! v=1 hw=test-device fw=bad/version key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "fw starts with a dot",
+    "line": "CHIRP! v=1 hw=test-device fw=.v1 key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "fw is 65 characters",
+    "line": "CHIRP! v=1 hw=test-device fw=vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "fw is missing",
+    "line": "CHIRP! v=1 hw=test-device key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "key_set is missing",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "caps is missing",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 radios=wifi t=demo-olimex-c3"
+   },
+   {
+    "name": "caps is an empty object",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 radios=wifi t=demo-olimex-c3 caps={}"
+   },
+   {
+    "name": "caps with a space, so the line splits it",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1, \"auth\":[1, 2], \"keyProvisioning\":[\"usb\"], \"otaKeyRotation\":false, \"otaFirmwareUpdate\":false, \"transports\":[\"https\"]}"
+   },
+   {
+    "name": "the line is over 512 bytes",
+    "line": "CHIRP! v=1 hw=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx fw=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff key_set=0 radios=wifi,thread,more,radios,than,rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr t=demo-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa caps={\"v\":1,\"auth\":[0,1,2],\"keyProvisioning\":[\"usb\",\"https-bootstrap\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"http\",\"https\",\"mqtt\",\"mqtts\",\"tcp\",\"tls-tcp\",\"udp\"]}"
+   }
+  ]
+ },
+ "profiles": {
+  "token": {
+   "about": "Wi-Fi firmware at Token and Signed that takes its key over USB: the MicroPython helper warblet.py, the Arduino library.",
+   "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}",
+   "accepts": [
+    "ssid",
+    "pass",
+    "aps",
+    "hwid",
+    "host",
+    "claim",
+    "token",
+    "key"
+   ]
+  },
+  "open": {
+   "about": "The Open starter: Wi-Fi and an id, no credential, no key. Its host is fixed in main.py, so a host push is taken only when it names that host.",
+   "caps": "{\"v\":1,\"auth\":[0],\"keyProvisioning\":[],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"http\"]}",
+   "accepts": [
+    "ssid",
+    "pass",
+    "aps",
+    "hwid",
+    "host"
+   ],
+   "host": "http.warbletiot.com"
+  }
+ },
+ "keys": {
+  "test": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+  "other": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+ },
+ "pushes": [
+  {
+   "name": "a first setup: networks, a setup code and an id",
+   "profile": "token",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"claim\":\"CHIRP-ABCD2345\",\"hwid\":\"board-1\",\"host\":\"https.warbletiot.com\"}",
+   "answer": "CHIRP= ok",
+   "stores": true
+  },
+  {
+   "name": "a key alone, after the board's first message",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "answer": "CHIRP= ok",
+   "stores": true
+  },
+  {
+   "name": "networks alone keep everything else",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"cafe\",\"pass\":\"p\"}",
+   "answer": "CHIRP= ok",
+   "stores": true
+  },
+  {
+   "name": "an empty object changes nothing on a set-up board",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{}",
+   "answer": "CHIRP= ok",
+   "stores": true
+  },
+  {
+   "name": "the empty host, Warblet's own",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"\"}",
+   "answer": "CHIRP= ok",
+   "stores": true
+  },
+  {
+   "name": "level is no longer a push field",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":2}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false
+  },
+  {
+   "name": "tls on firmware with no TLS switch",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":false}",
+   "answer": "CHIRP= err unsupported tls",
+   "stores": false
+  },
+  {
+   "name": "thread on Wi-Fi firmware",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"thread\":{\"dataset\":\"0e08\"}}",
+   "answer": "CHIRP= err unsupported thread",
+   "stores": false
+  },
+  {
+   "name": "an unknown field",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"colour\":\"red\"}",
+   "answer": "CHIRP= err unsupported colour",
+   "stores": false
+  },
+  {
+   "name": "names are exact: Level is not level",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"Level\":2}",
+   "answer": "CHIRP= err unsupported Level",
+   "stores": false
+  },
+  {
+   "name": "a good push with level in it is refused whole",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"cafe\",\"pass\":\"p\",\"level\":1}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false
+  },
+  {
+   "name": "of several unsupported fields, the one whose name sorts first is named",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":true,\"level\":1}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false
+  },
+  {
+   "name": "an unsupported field is named before a bad value",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":5,\"level\":1}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false
+  },
+  {
+   "name": "a field name that cannot be named on the line",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"two words\":1}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "an empty key",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "a key that is not 32 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"c2hvcnQ=\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "a key of 44 characters that are not base64",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "a key with no padding",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "a key that is not text",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":42}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "an empty token",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "an empty setup code",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "a setup code and a token together",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-X\",\"token\":\"t\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "an ssid that is not text",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":5}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "an id with a space",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"bad id\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "nine networks",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[{\"ssid\":\"n0\"},{\"ssid\":\"n1\"},{\"ssid\":\"n2\"},{\"ssid\":\"n3\"},{\"ssid\":\"n4\"},{\"ssid\":\"n5\"},{\"ssid\":\"n6\"},{\"ssid\":\"n7\"},{\"ssid\":\"n8\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "not JSON",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\": ",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "not an object",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "[1,2]",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "no id yet",
+   "profile": "token",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"token\":\"t\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false
+  },
+  {
+   "name": "nothing at all on a new board",
+   "profile": "token",
+   "stored": {},
+   "push": "{}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false
+  },
+  {
+   "name": "Open: a first setup with its own host",
+   "profile": "open",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"hwid\":\"board-1\",\"host\":\"http.warbletiot.com\"}",
+   "answer": "CHIRP= ok",
+   "stores": true
+  },
+  {
+   "name": "Open: networks alone",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"cafe\",\"pass\":\"p\"}",
+   "answer": "CHIRP= ok",
+   "stores": true
+  },
+  {
+   "name": "Open: a setup code",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-ABCD2345\"}",
+   "answer": "CHIRP= err unsupported claim",
+   "stores": false
+  },
+  {
+   "name": "Open: a token",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"t\"}",
+   "answer": "CHIRP= err unsupported token",
+   "stores": false
+  },
+  {
+   "name": "Open: a key",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "answer": "CHIRP= err unsupported key",
+   "stores": false
+  },
+  {
+   "name": "Open: level",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":0}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false
+  },
+  {
+   "name": "Open: tls",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":false}",
+   "answer": "CHIRP= err unsupported tls",
+   "stores": false
+  },
+  {
+   "name": "Open: another host than its own",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"https.warbletiot.com\"}",
+   "answer": "CHIRP= err unsupported host",
+   "stores": false
+  },
+  {
+   "name": "Open: an unknown field",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"colour\":\"red\"}",
+   "answer": "CHIRP= err unsupported colour",
+   "stores": false
+  },
+  {
+   "name": "Open: an id with a space",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"bad id\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false
+  },
+  {
+   "name": "Open: no id yet",
+   "profile": "open",
+   "stored": {},
+   "push": "{\"ssid\":\"home\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false
+  }
+ ]
+}

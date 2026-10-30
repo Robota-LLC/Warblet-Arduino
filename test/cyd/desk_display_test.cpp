@@ -179,7 +179,9 @@ int main() {
   check(sim.requests.empty(), "not set up: nothing is sent");
   Serial.type("CHIRP?\r\n");
   runFor(500);
-  check(said("CHIRP! v=1 radios=wifi sig=1 t=demo-cyd-desk-display-arduino"), "the announce names the demo (t=)");
+  check(said("CHIRP! v=1 fw=") && said(" key_set=0 radios=wifi t=demo-cyd-desk-display-arduino caps=") &&
+            !said("sig=1"),
+        "the announce names the demo (t=), CHIRP-PROV v1.8's line");
 
   // ---- set up over USB: stored, then a restart --------------------------------------
   Serial.type("CHIRP+ {\"ssid\":\"lab\",\"pass\":\"pw\",\"hwid\":\"sim-desk-1\",\"claim\":\"CHIRP-DESK1234\"}\r\n", 10500);

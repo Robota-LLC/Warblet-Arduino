@@ -1,0 +1,30 @@
+"""Write the CHIRP-PROV v1.8 vectors the library is tested against as plain
+lines the C++ tests read, from test/chirp-prov-v1.8.json, the shared vector
+file (a byte copy of the one the Warblet demos' rot-guard and host tests
+read; rot-guard compares the two).
+
+    python test/v18_vectors.py test/chirp-prov-v1.8.json OUT_DIR
+
+OUT_DIR/v18_pushes.txt  stored<TAB>push<TAB>answer<TAB>stores, the pushes of
+                        the "token" profile (the library's: it takes a key
+                        over USB and sends at Token and Signed)
+OUT_DIR/v18_caps.txt    name<TAB>caps, the valid capability objects
+"""
+import json
+import os
+import sys
+
+doc = json.load(open(sys.argv[1], encoding="utf-8"))
+out = sys.argv[2]
+os.makedirs(out, exist_ok=True)
+with open(os.path.join(out, "v18_pushes.txt"), "w", encoding="utf-8", newline="\n") as f:
+    for v in doc["pushes"]:
+        if v["profile"] != "token":
+            continue
+        stored = json.dumps(v["stored"], separators=(",", ":"))
+        f.write("\t".join([stored, v["push"], v["answer"], "1" if v["stores"] else "0"]) + "\n")
+with open(os.path.join(out, "v18_caps.txt"), "w", encoding="utf-8", newline="\n") as f:
+    for v in doc["caps"]["valid"]:
+        f.write(v["name"].replace("\t", " ") + "\t" + v["caps"] + "\n")
+print("v18 vectors:", sum(1 for v in doc["pushes"] if v["profile"] == "token"), "pushes,",
+      len(doc["caps"]["valid"]), "capability objects")

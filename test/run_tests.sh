@@ -56,7 +56,10 @@ fi
 # shellcheck disable=SC2086
 "$CXX" -std=c++11 -Wall -Wextra -O2 -o "$OUT/host_test" test/host_test.cpp \
   "$OUT/sha256.o" "$OUT/text.o" "$OUT/sign.o" "$OUT/wire.o" "$OUT/json.o" "$OUT/prov.o" $DEMO
-"$OUT/host_test" test/vectors.txt test/prov_vectors.txt
+# The shared CHIRP-PROV v1.8 vectors, a byte copy of the Warblet demos' file
+# (their rot-guard compares the two), as lines the C++ tests read.
+"$PYTHON" test/v18_vectors.py test/chirp-prov-v1.8.json "$OUT"
+"$OUT/host_test" test/vectors.txt test/prov_vectors.txt "$OUT/v18_pushes.txt" "$OUT/v18_caps.txt"
 
 # The public calls (test/api): every call and overload the reference lists,
 # taken by its exact type and linked with the library. Removing or changing
