@@ -431,12 +431,12 @@ void testWire() {
         "control characters found; UTF-8 and quotes are fine");
 
   // The longest head fits kHttpHeadMax: the longest host the board connects
-  // to (kHostTextMax, 130: a stored 128-character tcp. host as https.), a
-  // 128-character id and token (a claim code, so it is sent twice), a
+  // to (kHostTextMax, 65: a stored 63-character tcp. host as https.), a
+  // 128-character id, a 63-character token (a claim code, so it is sent twice), a
   // 32-character tag, a 20-digit nonce and a signature. Warblet.cpp does not
   // check the length again.
   {
-    std::string h128(kHostTextMax, 'h'), id128(128, 'i'), tok128 = "CHIRP-" + std::string(122, 't');
+    std::string h128(kHostTextMax, 'h'), id128(128, 'i'), tok128 = "CHIRP-" + std::string(57, 't');
     std::string tag32(32, 'g'), sig(64, 'a');
     static char big[kHttpHeadMax];
     HttpIngest worst = {h128.c_str(), id128.c_str(), tok128.c_str(), tag32.c_str(),
@@ -745,11 +745,11 @@ void testWire() {
     check(hostFor(plain, mqtt, out) == plain && hostFor(plain, https, out) == plain &&
               hostFor(address, mqtt, out) == address && hostFor(longer, mqtt, out) == longer,
           "host: a name that names no transport is used as it was pushed");
-    // The longest: a 128-character stored host whose 3-letter label becomes
+    // The longest: a 63-character stored host whose 3-letter label becomes
     // https, two characters longer.
-    std::string longest = "tcp." + std::string(124, 'd');
-    check(used(longest.c_str(), https) == "https." + std::string(124, 'd') && kHostTextMax == 130,
-          "host: a 128-character tcp. host becomes a 130-character https. host, whole");
+    std::string longest = "tcp." + std::string(59, 'd');
+    check(used(longest.c_str(), https) == "https." + std::string(59, 'd') && kHostTextMax == 65,
+          "host: a 63-character tcp. host becomes a 65-character https. host, whole");
   }
 }
 
@@ -870,9 +870,15 @@ void testProv() {
   expect("{\"ssid\":\"0123456789abcdef0123456789abcdefX\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson,
          "an ssid of 33 bytes does not fit 802.11's 32");
   expect((std::string("{\"ssid\":\"") + std::string(32, 's') + "\",\"pass\":\"" + std::string(64, 'p') +
-          "\",\"token\":\"" + std::string(128, 't') + "\",\"hwid\":\"" + std::string(128, 'h') + "\"}")
+          "\",\"token\":\"" + std::string(63, 't') + "\",\"hwid\":\"" + std::string(128, 'h') + "\"}")
              .c_str(),
-         ProvResult::Ok, "fields exactly at their limits fit (ssid 32, pass 64, token 128, hwid 128)");
+         ProvResult::Ok, "fields exactly at their limits fit (ssid 32, pass 64, token 63, hwid 128)");
+  expect((std::string("{\"ssid\":\"s\",\"hwid\":\"h\",\"token\":\"") + std::string(64, 't') + "\"}").c_str(),
+         ProvResult::BadJson, "a token of 64 characters, one over the contract's 63");
+  expect((std::string("{\"ssid\":\"s\",\"token\":\"T\",\"hwid\":\"h\",\"host\":\"") + std::string(64, 'h') + "\"}").c_str(),
+         ProvResult::BadJson, "a host of 64 characters, one over the contract's 63");
+  expect("{\"ssid\":\"s\",\"token\":\"T\",\"hwid\":\"h\",\"host\":\"evil.example/x y\"}", ProvResult::BadJson,
+         "a host with a slash and a space");
   std::string seventeen = "{\"token\":\"T\",\"hwid\":\"h\",\"ssid\":\"";
   for (int i = 0; i < 17; i++) seventeen += "\\u00e9";
   seventeen += "\"}";
@@ -986,7 +992,7 @@ void testProv() {
 
   // Networks.
   expect("{\"ssid\":\"old\",\"pass\":\"p\",\"aps\":[{\"ssid\":\"old\",\"pass\":\"p\"},{\"ssid\":\"van\",\"pass\":\"\"},"
-         "{\"ssid\":\"phone\"}],\"token\":\"T\",\"hwid\":\"h\"}",
+         "{\"ssid\":\"phone\",\"pass\":\"\"}],\"token\":\"T\",\"hwid\":\"h\"}",
          ProvResult::Ok, "a list of networks");
   // The networks the board tries, in order, as network(i) hands them to it.
   auto tried = [&]() {
@@ -1163,8 +1169,8 @@ void testProvV18(const char* path) {
     size_t start = 0;
     for (size_t tab; (tab = l.find('\t', start)) != std::string::npos; start = tab + 1) fld.push_back(l.substr(start, tab - start));
     fld.push_back(l.substr(start));
-    if (fld.size() != 4) {
-      check(false, "vector line has four fields", l);
+    if (fld.size() != 5) {
+      check(false, "vector line has five fields", l);
       continue;
     }
     Settings stored, scratch, empty;
@@ -1183,6 +1189,10 @@ void testProvV18(const char* path) {
     std::string answer = e == ProvResponder::kStore ? r.stored(true) : (e == ProvResponder::kReply ? r.reply() : "none");
     checkStr(answer, fld[2], ("v1.8 answer: " + fld[1]).c_str());
     check((e == ProvResponder::kStore) == (fld[3] == "1"), "stored only when ok", fld[1]);
+    // The settings held afterwards: the merge on ok, what was stored otherwise.
+    static char held[4096];
+    settingsToJson(e == ProvResponder::kStore ? r.pending() : stored, held, sizeof held);
+    checkStr(held, fld[4], ("v1.8 settings after: " + fld[1]).c_str());
     n++;
   }
   fclose(f);
@@ -1289,7 +1299,8 @@ void testProvDemo(const char* path) {
     }
   }
   fclose(f);
-  check(same >= 30 && stricter >= 8, "the vectors file holds the expected cases");
+  // v1.8's bounds and aps rules moved some cases from "same" to "v1.8".
+  check(same >= 25 && stricter >= 8 && same + stricter + v18 >= 49, "the vectors file holds the expected cases");
   printf("      %d pushes answered as chirp_prov.py answers them; %d documented stricter cases refused; %d as "
          "CHIRP-PROV v1.8 answers them\n", same, stricter, v18);
 }

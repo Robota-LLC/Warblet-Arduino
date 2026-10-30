@@ -1,5 +1,5 @@
 {
- "_": "CHIRP-PROV v1.8 test vectors (the Warblet contract, Serial provisioning). One file for every reader of the protocol: the checks over the demos, every firmware family's host tests and the setup page's parser. caps: objects that are and are not a capability object. announce: lines that carry a capability report (with what it says) and lines that carry none. pushes: a setup push to a responder of a profile, with the settings it holds, the answer it must print, and whether it stores anything; a refused push leaves the settings it holds as they were. Every id, code and key here is a test value.",
+ "_": "CHIRP-PROV v1.8 test vectors (the Warblet contract, Serial provisioning). One file for every reader of the protocol: the checks over the demos, every firmware family's host tests and the setup page's parser. caps: objects that are and are not a capability object. announce: lines that carry a capability report (with what it says) and lines that carry none. pushes: a setup push to a responder of a profile, with the settings it holds (stored), the answer it must print, whether it stores anything, and the settings it holds afterwards (after: ssid with its pass, aps when a list is held, thread, the credential as token, then hwid, host and key, and an empty value left out); a refused push leaves the settings it holds as they were. A firmware family runs the profiles it implements. Every id, code and key here is a test value.",
  "protocol": "chirp-prov/1.8",
  "keyOrder": [
   "v",
@@ -11,10 +11,18 @@
  ],
  "bounds": {
   "caps": 256,
-  "line": 512
+  "line": 512,
+  "ssidBytes": 32,
+  "passBytes": 64,
+  "credential": 63,
+  "host": 63,
+  "hwid": 128,
+  "hwidHeldAtLeast": 31,
+  "networks": 8
  },
  "fwPattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
  "fieldNamePattern": "^[A-Za-z0-9_.-]{1,32}$",
+ "hostPattern": "^[A-Za-z0-9.-]{0,63}$",
  "caps": {
   "valid": [
    {
@@ -142,6 +150,22 @@
    {
     "name": "not an object",
     "caps": "[1,2]"
+   },
+   {
+    "name": "auth holds null",
+    "caps": "{\"v\":1,\"auth\":[null,1],\"keyProvisioning\":[],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "a key named Auth, not auth",
+    "caps": "{\"v\":1,\"Auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "auth and Auth both",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"Auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "a transport that is null",
+    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\",null]}"
    },
    {
     "name": "over 256 bytes",
@@ -353,6 +377,18 @@
     "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1, \"auth\":[1, 2], \"keyProvisioning\":[\"usb\"], \"otaKeyRotation\":false, \"otaFirmwareUpdate\":false, \"transports\":[\"https\"]}"
    },
    {
+    "name": "tokens out of order: key_set before fw",
+    "line": "CHIRP! v=1 hw=test-device key_set=0 fw=v1.6.0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}"
+   },
+   {
+    "name": "caps not last: t= after it",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 radios=wifi caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]} t=demo-olimex-c3"
+   },
+   {
+    "name": "a token after caps",
+    "line": "CHIRP! v=1 hw=test-device fw=v1.6.0 key_set=0 radios=wifi t=demo-olimex-c3 caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]} extra=1"
+   },
+   {
     "name": "the line is over 512 bytes",
     "line": "CHIRP! v=1 hw=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx fw=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff key_set=0 radios=wifi,thread,more,radios,than,rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr t=demo-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa caps={\"v\":1,\"auth\":[0,1,2],\"keyProvisioning\":[\"usb\",\"https-bootstrap\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"http\",\"https\",\"mqtt\",\"mqtts\",\"tcp\",\"tls-tcp\",\"udp\"]}"
    }
@@ -384,6 +420,32 @@
     "host"
    ],
    "host": "http.warbletiot.com"
+  },
+  "signed": {
+   "about": "Wi-Fi firmware at Signed only (auth [2]). Its signed messages still carry a credential, so it takes a claim or token, and its key over USB. No firmware ships this today.",
+   "caps": "{\"v\":1,\"auth\":[2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}",
+   "accepts": [
+    "ssid",
+    "pass",
+    "aps",
+    "hwid",
+    "host",
+    "claim",
+    "token",
+    "key"
+   ]
+  },
+  "thread": {
+   "about": "Thread firmware (802.15.4, no Wi-Fi) at Token and Signed: a thread object in place of networks, and its key over USB. It has an id of its own, so a push without hwid is complete.",
+   "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"udp\"]}",
+   "accepts": [
+    "thread",
+    "hwid",
+    "host",
+    "claim",
+    "token",
+    "key"
+   ]
   }
  },
  "keys": {
@@ -397,7 +459,14 @@
    "stored": {},
    "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"claim\":\"CHIRP-ABCD2345\",\"hwid\":\"board-1\",\"host\":\"https.warbletiot.com\"}",
    "answer": "CHIRP= ok",
-   "stores": true
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "CHIRP-ABCD2345",
+    "hwid": "board-1",
+    "host": "https.warbletiot.com"
+   }
   },
   {
    "name": "a key alone, after the board's first message",
@@ -410,7 +479,14 @@
    },
    "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
    "answer": "CHIRP= ok",
-   "stores": true
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
   },
   {
    "name": "networks alone keep everything else",
@@ -423,7 +499,13 @@
    },
    "push": "{\"ssid\":\"cafe\",\"pass\":\"p\"}",
    "answer": "CHIRP= ok",
-   "stores": true
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "p",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "an empty object changes nothing on a set-up board",
@@ -436,7 +518,13 @@
    },
    "push": "{}",
    "answer": "CHIRP= ok",
-   "stores": true
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "the empty host, Warblet's own",
@@ -449,10 +537,16 @@
    },
    "push": "{\"host\":\"\"}",
    "answer": "CHIRP= ok",
-   "stores": true
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
-   "name": "a host that is null",
+   "name": "a host of 63 characters",
    "profile": "token",
    "stored": {
     "ssid": "home",
@@ -460,12 +554,204 @@
     "token": "tok-0123456789",
     "hwid": "board-1"
    },
-   "push": "{\"host\":null}",
+   "push": "{\"host\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh.com\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "host": "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh.com"
+   }
+  },
+  {
+   "name": "a host in capitals",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"HTTPS.example.com\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "host": "HTTPS.example.com"
+   }
+  },
+  {
+   "name": "networks alone keep the key",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"ssid\":\"cafe\",\"pass\":\"p\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "p",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
+  },
+  {
+   "name": "a token alone (a rotation) keeps the key",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"token\":\"tok-rotated\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-rotated",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
+  },
+  {
+   "name": "the id the board already has keeps the key",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"hwid\":\"board-1\",\"token\":\"tok-2\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-2",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
+  },
+  {
+   "name": "a setup code starts a new device: the key goes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"claim\":\"CHIRP-NEWCODE1\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "CHIRP-NEWCODE1",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "another id starts a new device: the key goes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"hwid\":\"board-2\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-2"
+   }
+  },
+  {
+   "name": "an id that differs only in case is another device",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"hwid\":\"BOARD-1\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "BOARD-1"
+   }
+  },
+  {
+   "name": "a new device that brings its own key keeps that one",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"claim\":\"CHIRP-NEWCODE1\",\"key\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "CHIRP-NEWCODE1",
+    "hwid": "board-1",
+    "key": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+   }
+  },
+  {
+   "name": "a new device with a bad key is refused, and the old key stays",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"claim\":\"CHIRP-NEWCODE1\",\"key\":\"c2hvcnQ=\"}",
    "answer": "CHIRP= err bad-json",
-   "stores": false
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
   },
   {
-   "name": "level is no longer a push field",
+   "name": "an id of 31 characters, which every responder holds",
    "profile": "token",
    "stored": {
     "ssid": "home",
@@ -473,243 +759,15 @@
     "token": "tok-0123456789",
     "hwid": "board-1"
    },
-   "push": "{\"level\":2}",
-   "answer": "CHIRP= err unsupported level",
-   "stores": false
-  },
-  {
-   "name": "tls on firmware with no TLS switch",
-   "profile": "token",
-   "stored": {
+   "push": "{\"hwid\":\"id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
     "ssid": "home",
     "pass": "pw",
     "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"tls\":false}",
-   "answer": "CHIRP= err unsupported tls",
-   "stores": false
-  },
-  {
-   "name": "thread on Wi-Fi firmware",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"thread\":{\"dataset\":\"0e08\"}}",
-   "answer": "CHIRP= err unsupported thread",
-   "stores": false
-  },
-  {
-   "name": "an unknown field",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"colour\":\"red\"}",
-   "answer": "CHIRP= err unsupported colour",
-   "stores": false
-  },
-  {
-   "name": "names are exact: Level is not level",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"Level\":2}",
-   "answer": "CHIRP= err unsupported Level",
-   "stores": false
-  },
-  {
-   "name": "a good push with level in it is refused whole",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"ssid\":\"cafe\",\"pass\":\"p\",\"level\":1}",
-   "answer": "CHIRP= err unsupported level",
-   "stores": false
-  },
-  {
-   "name": "of several unsupported fields, the one whose name sorts first is named",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"tls\":true,\"level\":1}",
-   "answer": "CHIRP= err unsupported level",
-   "stores": false
-  },
-  {
-   "name": "an unsupported field is named before a bad value",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"ssid\":5,\"level\":1}",
-   "answer": "CHIRP= err unsupported level",
-   "stores": false
-  },
-  {
-   "name": "a field name that cannot be named on the line",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"two words\":1}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "an empty key",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"key\":\"\"}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "a key that is not 32 bytes",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"key\":\"c2hvcnQ=\"}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "a key of 44 characters that are not base64",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"key\":\"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=\"}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "a key with no padding",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY\"}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "a key that is not text",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"key\":42}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "an empty token",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"token\":\"\"}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "an empty setup code",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"claim\":\"\"}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "a setup code and a token together",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"claim\":\"CHIRP-X\",\"token\":\"t\"}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "an ssid that is not text",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"ssid\":5}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
-  },
-  {
-   "name": "an id with a space",
-   "profile": "token",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "token": "tok-0123456789",
-    "hwid": "board-1"
-   },
-   "push": "{\"hwid\":\"bad id\"}",
-   "answer": "CHIRP= err bad-json",
-   "stores": false
+    "hwid": "id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   }
   },
   {
    "name": "an id of 129 characters, one over the grammar's 128",
@@ -722,7 +780,575 @@
    },
    "push": "{\"hwid\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\"}",
    "answer": "CHIRP= err bad-json",
-   "stores": false
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an empty id leaves the board without one",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an id with a space",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"bad id\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an ssid of 32 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ssssssssssssssssssssssssssssssss\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "ssssssssssssssssssssssssssssssss",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an ssid of 33 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"sssssssssssssssssssssssssssssssss\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an ssid of 16 two-byte characters, 32 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an ssid of 17 two-byte characters, 34 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an empty ssid",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a pass of 64 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a pass of 65 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an empty pass, an open network",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"cafe\",\"pass\":\"\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a token of 63 characters",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a token of 64 characters",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a setup code of 63 characters",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "CHIRP-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a setup code of 64 characters",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a host of 64 characters",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh.com\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a host with a slash and a space",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"evil.example/x y\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a host with an underscore",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"under_score.example\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a host that is null",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":null}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "aps alone: its first entry becomes the network tried first",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[{\"ssid\":\"cafe\",\"pass\":\"p1\"},{\"ssid\":\"office\",\"pass\":\"p2\"}]}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "p1",
+    "aps": [
+     {
+      "ssid": "cafe",
+      "pass": "p1"
+     },
+     {
+      "ssid": "office",
+      "pass": "p2"
+     }
+    ],
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "aps with its first entry also at the top",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"cafe\",\"pass\":\"p1\",\"aps\":[{\"ssid\":\"cafe\",\"pass\":\"p1\"},{\"ssid\":\"office\",\"pass\":\"p2\"}]}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "p1",
+    "aps": [
+     {
+      "ssid": "cafe",
+      "pass": "p1"
+     },
+     {
+      "ssid": "office",
+      "pass": "p2"
+     }
+    ],
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "networks alone after aps name exactly one network",
+   "profile": "token",
+   "stored": {
+    "ssid": "cafe",
+    "pass": "p1",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "aps": [
+     {
+      "ssid": "cafe",
+      "pass": "p1"
+     },
+     {
+      "ssid": "office",
+      "pass": "p2"
+     }
+    ]
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an ssid that is not aps's first",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"aps\":[{\"ssid\":\"cafe\",\"pass\":\"p1\"},{\"ssid\":\"office\",\"pass\":\"p2\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a pass that is not aps's first",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"other\",\"aps\":[{\"ssid\":\"cafe\",\"pass\":\"p1\"},{\"ssid\":\"office\",\"pass\":\"p2\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an aps entry with another key",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[{\"ssid\":\"a\",\"pass\":\"b\",\"bssid\":\"x\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an aps entry without its pass",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[{\"ssid\":\"a\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an aps entry without its ssid",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[{\"pass\":\"b\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an empty aps",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an aps entry with an ssid of 33 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[{\"ssid\":\"sssssssssssssssssssssssssssssssss\",\"pass\":\"\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "nine networks",
@@ -733,9 +1359,376 @@
     "token": "tok-0123456789",
     "hwid": "board-1"
    },
-   "push": "{\"aps\":[{\"ssid\":\"n0\"},{\"ssid\":\"n1\"},{\"ssid\":\"n2\"},{\"ssid\":\"n3\"},{\"ssid\":\"n4\"},{\"ssid\":\"n5\"},{\"ssid\":\"n6\"},{\"ssid\":\"n7\"},{\"ssid\":\"n8\"}]}",
+   "push": "{\"aps\":[{\"ssid\":\"n0\",\"pass\":\"\"},{\"ssid\":\"n1\",\"pass\":\"\"},{\"ssid\":\"n2\",\"pass\":\"\"},{\"ssid\":\"n3\",\"pass\":\"\"},{\"ssid\":\"n4\",\"pass\":\"\"},{\"ssid\":\"n5\",\"pass\":\"\"},{\"ssid\":\"n6\",\"pass\":\"\"},{\"ssid\":\"n7\",\"pass\":\"\"},{\"ssid\":\"n8\",\"pass\":\"\"}]}",
    "answer": "CHIRP= err bad-json",
-   "stores": false
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "level is no longer a push field",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":2}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "tls on firmware with no TLS switch",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":false}",
+   "answer": "CHIRP= err unsupported tls",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "thread on Wi-Fi firmware",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"thread\":{\"dataset\":\"0e08\"}}",
+   "answer": "CHIRP= err unsupported thread",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an unknown field",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"colour\":\"red\"}",
+   "answer": "CHIRP= err unsupported colour",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "names are exact: Level is not level",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"Level\":2}",
+   "answer": "CHIRP= err unsupported Level",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a good push with level in it is refused whole",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"cafe\",\"pass\":\"p\",\"level\":1}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "of several unsupported fields, the one whose name sorts first is named",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":true,\"level\":1}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an unsupported field is named before a bad value",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":5,\"level\":1}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a field name that cannot be named on the line",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"two words\":1}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an empty key",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a key that is not 32 bytes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"c2hvcnQ=\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a key of 44 characters that are not base64",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a key with no padding",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a key in URL-safe base64",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwd-_8=\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a key that is not text",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":42}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an empty token",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an empty setup code",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a setup code and a token together",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-X\",\"token\":\"t\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an ssid that is not text",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":5}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "not JSON",
@@ -748,7 +1741,51 @@
    },
    "push": "{\"hwid\": ",
    "answer": "CHIRP= err bad-json",
-   "stores": false
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "not JSON: NaN, which a board's parser does not take",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":1,\"ssid\":NaN}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "not JSON: Infinity",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":Infinity}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "not an object",
@@ -761,7 +1798,13 @@
    },
    "push": "[1,2]",
    "answer": "CHIRP= err bad-json",
-   "stores": false
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "no id yet",
@@ -769,7 +1812,8 @@
    "stored": {},
    "push": "{\"ssid\":\"home\",\"token\":\"t\"}",
    "answer": "CHIRP= err missing-field",
-   "stores": false
+   "stores": false,
+   "after": {}
   },
   {
    "name": "nothing at all on a new board",
@@ -777,7 +1821,8 @@
    "stored": {},
    "push": "{}",
    "answer": "CHIRP= err missing-field",
-   "stores": false
+   "stores": false,
+   "after": {}
   },
   {
    "name": "Open: a first setup with its own host",
@@ -785,7 +1830,12 @@
    "stored": {},
    "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"hwid\":\"board-1\",\"host\":\"http.warbletiot.com\"}",
    "answer": "CHIRP= ok",
-   "stores": true
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "Open: networks alone",
@@ -797,115 +1847,73 @@
    },
    "push": "{\"ssid\":\"cafe\",\"pass\":\"p\"}",
    "answer": "CHIRP= ok",
-   "stores": true
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "p",
+    "hwid": "board-1"
+   }
   },
   {
-   "name": "Open: a setup code",
+   "name": "Open: aps alone",
    "profile": "open",
    "stored": {
     "ssid": "home",
     "pass": "pw",
     "hwid": "board-1"
    },
-   "push": "{\"claim\":\"CHIRP-ABCD2345\"}",
-   "answer": "CHIRP= err unsupported claim",
-   "stores": false
+   "push": "{\"aps\":[{\"ssid\":\"cafe\",\"pass\":\"p1\"},{\"ssid\":\"office\",\"pass\":\"p2\"}]}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "p1",
+    "aps": [
+     {
+      "ssid": "cafe",
+      "pass": "p1"
+     },
+     {
+      "ssid": "office",
+      "pass": "p2"
+     }
+    ],
+    "hwid": "board-1"
+   }
   },
   {
-   "name": "Open: a token",
+   "name": "Open: an id of 31 characters",
    "profile": "open",
    "stored": {
     "ssid": "home",
     "pass": "pw",
     "hwid": "board-1"
    },
-   "push": "{\"token\":\"t\"}",
-   "answer": "CHIRP= err unsupported token",
-   "stores": false
+   "push": "{\"hwid\":\"id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   }
   },
   {
-   "name": "Open: a key",
+   "name": "Open: an id of 129 characters",
    "profile": "open",
    "stored": {
     "ssid": "home",
     "pass": "pw",
     "hwid": "board-1"
    },
-   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
-   "answer": "CHIRP= err unsupported key",
-   "stores": false
-  },
-  {
-   "name": "Open: level",
-   "profile": "open",
-   "stored": {
+   "push": "{\"hwid\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
     "ssid": "home",
     "pass": "pw",
     "hwid": "board-1"
-   },
-   "push": "{\"level\":0}",
-   "answer": "CHIRP= err unsupported level",
-   "stores": false
-  },
-  {
-   "name": "Open: tls",
-   "profile": "open",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "hwid": "board-1"
-   },
-   "push": "{\"tls\":false}",
-   "answer": "CHIRP= err unsupported tls",
-   "stores": false
-  },
-  {
-   "name": "Open: another host than its own",
-   "profile": "open",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "hwid": "board-1"
-   },
-   "push": "{\"host\":\"https.warbletiot.com\"}",
-   "answer": "CHIRP= err unsupported host",
-   "stores": false
-  },
-  {
-   "name": "Open: an empty host is not its own",
-   "profile": "open",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "hwid": "board-1"
-   },
-   "push": "{\"host\":\"\"}",
-   "answer": "CHIRP= err unsupported host",
-   "stores": false
-  },
-  {
-   "name": "Open: a null host is not its own",
-   "profile": "open",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "hwid": "board-1"
-   },
-   "push": "{\"host\":null}",
-   "answer": "CHIRP= err unsupported host",
-   "stores": false
-  },
-  {
-   "name": "Open: an unknown field",
-   "profile": "open",
-   "stored": {
-    "ssid": "home",
-    "pass": "pw",
-    "hwid": "board-1"
-   },
-   "push": "{\"colour\":\"red\"}",
-   "answer": "CHIRP= err unsupported colour",
-   "stores": false
+   }
   },
   {
    "name": "Open: an id with a space",
@@ -917,7 +1925,267 @@
    },
    "push": "{\"hwid\":\"bad id\"}",
    "answer": "CHIRP= err bad-json",
-   "stores": false
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an empty id",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an ssid of 33 bytes",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"sssssssssssssssssssssssssssssssss\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a pass of 65 bytes",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an aps entry with another key",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[{\"ssid\":\"a\",\"pass\":\"b\",\"x\":1}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a setup code",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-ABCD2345\"}",
+   "answer": "CHIRP= err unsupported claim",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a token",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"t\"}",
+   "answer": "CHIRP= err unsupported token",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a key",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "answer": "CHIRP= err unsupported key",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: level",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":0}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: tls",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":false}",
+   "answer": "CHIRP= err unsupported tls",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: another host than its own",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"https.warbletiot.com\"}",
+   "answer": "CHIRP= err unsupported host",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an empty host is not its own",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"\"}",
+   "answer": "CHIRP= err unsupported host",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a null host is not its own",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":null}",
+   "answer": "CHIRP= err unsupported host",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: another host is named before a bad id",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"https.warbletiot.com\",\"hwid\":\"bad id\"}",
+   "answer": "CHIRP= err unsupported host",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a setup code is named though its own host is fine",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-ABCD2345\",\"host\":\"http.warbletiot.com\"}",
+   "answer": "CHIRP= err unsupported claim",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an unknown field",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"colour\":\"red\"}",
+   "answer": "CHIRP= err unsupported colour",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "Open: no id yet",
@@ -925,7 +2193,299 @@
    "stored": {},
    "push": "{\"ssid\":\"home\"}",
    "answer": "CHIRP= err missing-field",
-   "stores": false
+   "stores": false,
+   "after": {}
+  },
+  {
+   "name": "Signed only: a first setup with a setup code",
+   "profile": "signed",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"claim\":\"CHIRP-ABCD2345\",\"hwid\":\"board-1\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "CHIRP-ABCD2345",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a token alone",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-rotated\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-rotated",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a key",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
+  },
+  {
+   "name": "Signed only: an id of 31 characters",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   }
+  },
+  {
+   "name": "Signed only: an id of 129 characters",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: level",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":2}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: no credential yet",
+   "profile": "signed",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"hwid\":\"board-1\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {}
+  },
+  {
+   "name": "Thread: a first setup with a dataset and a setup code",
+   "profile": "thread",
+   "stored": {},
+   "push": "{\"thread\":{\"dataset\":\"0e080000000000010000\"},\"claim\":\"CHIRP-ABCD2345\",\"hwid\":\"board-1\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "CHIRP-ABCD2345",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: a key",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
+  },
+  {
+   "name": "Thread: an id of 31 characters",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   }
+  },
+  {
+   "name": "Thread: an id of 129 characters",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: a dataset of odd length",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"thread\":{\"dataset\":\"0e0\"}}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: an ssid on a board with no Wi-Fi",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\"}",
+   "answer": "CHIRP= err unsupported ssid",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: aps on a board with no Wi-Fi",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"aps\":[{\"ssid\":\"cafe\",\"pass\":\"p1\"},{\"ssid\":\"office\",\"pass\":\"p2\"}]}",
+   "answer": "CHIRP= err unsupported aps",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: level",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":1}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: no credential yet",
+   "profile": "thread",
+   "stored": {},
+   "push": "{\"thread\":{\"dataset\":\"0e080000000000010000\"}}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {}
   }
  ]
 }

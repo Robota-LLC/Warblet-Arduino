@@ -78,7 +78,7 @@ It proves the logic of `Warblet.cpp` and `WarbletMqtt.cpp`. **It cannot see real
 - the clock: a time from before 2025-01-01 is not taken, one from that date on is, and a nonce from it is real (`time()` here returns what the test sets);
 - the TLS limits and the pinned roots;
 - settings in NVS: records of 1, 2,000, 2,046 and 2,047 characters load whole (`Preferences::getString()` counts the NUL, as the core's does), and a 2,048-character one, with no room for its NUL in the 2 KB text, is not loaded cut short;
-- the MQTT configuration, a 129-character host handed to the client whole, and that only the MQTT client's own log tag is quieted;
+- the MQTT configuration, a 64-character host handed to the client whole, and that only the MQTT client's own log tag is quieted;
 - what the client's events mean: a failed attempt, a refusal (code 5), no device (code 4), a dropped session;
 - a report acknowledged after 2.5 s, or never, goes on the wire once;
 - commands: three before `loop()` takes one are all kept; two cut off mid-transfer, or one cut off by a dropped session, are said and do not block the next; 48 KB arriving at once are kept or said dropped, none silently, and exactly 32 KB wait at most (four of 8,000 bytes kept, two said dropped), with room again once `loop()` has taken them; a command waiting when the session restarts is still handed over.
@@ -181,7 +181,7 @@ Each was reverted afterwards, and the suite passed again.
 `demo-c` fails only once under the older rule. It compares the demo's HMAC over the library's own input bytes, so it cannot judge the shape.
 ## Where the library is stricter than `chirp_prov.py`, on purpose
 
-- A string longer than its field is refused with `bad-json`. The limits are: Wi-Fi name 32 bytes, password 64, token 128, id 128, host 128.
+- A string longer than its field is refused with `bad-json`. The limits are CHIRP-PROV v1.8's: Wi-Fi name 1 to 32 bytes, password 64, claim code or token 63, id 128, host 63 (letters, digits, `.` and `-`).
 - A non-empty `key` must be 44 base64 characters that decode to 32 bytes (the bare-metal demo's rule).
 - A control character (below 0x20, or 0x7f) in any string is refused.
 - `NaN` and `Infinity` are refused, because they are not JSON. CPython's `json` accepts them.

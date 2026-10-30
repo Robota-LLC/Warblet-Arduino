@@ -31,9 +31,9 @@ bool hasControlChar(const char* s);
 static const char* const kHttpsHost = "https.warbletiot.com";
 static const char* const kMqttHost = "mqtt.warbletiot.com";
 
-// The longest host the board connects to: a stored host of 128 characters
+// The longest host the board connects to: a stored host of 63 characters
 // whose 3-letter transport name (tcp, udp) becomes https.
-static const size_t kHostTextMax = 130;
+static const size_t kHostTextMax = 65;
 
 // The host to connect to: builtIn when none is stored, else the stored one
 // (an override for a self-hosted core). A device endpoint is named for its

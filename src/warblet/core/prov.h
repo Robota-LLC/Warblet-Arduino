@@ -33,9 +33,9 @@ struct Settings {
   Network aps[kMaxNetworks];  // the full list when the setup page sent one
   uint8_t apsCount;
   bool hasAps;
-  char credential[129];  // the device token, or a claim code ("CHIRP-...")
+  char credential[64];   // the device token, or a claim code ("CHIRP-..."), 1 to 63
   char hwId[129];
-  char host[129];        // an override; empty means the built-in default
+  char host[64];         // an override, 0 to 63 of A-Z a-z 0-9 . -; empty means the built-in default
   char key[45];          // the signing key as base64, or empty
 
   void clear();

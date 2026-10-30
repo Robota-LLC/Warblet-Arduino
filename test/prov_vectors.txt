@@ -22,13 +22,13 @@
 {}	{"key":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="}	CHIRP= err missing-field	-	same
 {}	{"ssid":"s","token":"T","hwid":"h","key":42}	CHIRP= err bad-json	-	same
 {}	{"ssid":"s","token":"T","hwid":"h","host":"my-core.example.com"}	CHIRP= ok	["s","","T","h","my-core.example.com","",null]	same
-{}	{"ssid":"old","pass":"p","aps":[{"ssid":"old","pass":"p"},{"ssid":"van","pass":""},{"ssid":"phone"}],"token":"T","hwid":"h"}	CHIRP= ok	["old","p","T","h","","",[["old","p"],["van",""],["phone",""]]]	same
-{}	{"token":"T","hwid":"h","ssid":"a","aps":[{"pass":"x"}]}	CHIRP= err bad-json	-	same
-{}	{"token":"T","hwid":"h","ssid":"a","aps":["a"]}	CHIRP= err bad-json	-	same
+{}	{"ssid":"old","pass":"p","aps":[{"ssid":"old","pass":"p"},{"ssid":"van","pass":""},{"ssid":"phone"}],"token":"T","hwid":"h"}	CHIRP= ok	["old","p","T","h","","",[["old","p"],["van",""],["phone",""]]]	v1.8=CHIRP= err bad-json
+{}	{"token":"T","hwid":"h","ssid":"a","aps":[{"pass":"x"}]}	CHIRP= err bad-json	-	v1.8=CHIRP= err bad-json
+{}	{"token":"T","hwid":"h","ssid":"a","aps":["a"]}	CHIRP= err bad-json	-	v1.8=CHIRP= err bad-json
 {}	{"token":"T","hwid":"h","ssid":"a","aps":{}}	CHIRP= err bad-json	-	same
 {}	{"token":"T","hwid":"h","ssid":"a","aps":[{"ssid":"a","pass":5}]}	CHIRP= err bad-json	-	same
-{}	{"token":"T","hwid":"h","ssid":"a","aps":[{"ssid":"n0"},{"ssid":"n1"},{"ssid":"n2"},{"ssid":"n3"},{"ssid":"n4"},{"ssid":"n5"},{"ssid":"n6"},{"ssid":"n7"},{"ssid":"n8"}]}	CHIRP= err bad-json	-	same
-{}	{"token":"T","hwid":"h","ssid":"a","aps":[]}	CHIRP= ok	["a","","T","h","","",[]]	same
+{}	{"token":"T","hwid":"h","ssid":"a","aps":[{"ssid":"n0"},{"ssid":"n1"},{"ssid":"n2"},{"ssid":"n3"},{"ssid":"n4"},{"ssid":"n5"},{"ssid":"n6"},{"ssid":"n7"},{"ssid":"n8"}]}	CHIRP= err bad-json	-	v1.8=CHIRP= err bad-json
+{}	{"token":"T","hwid":"h","ssid":"a","aps":[]}	CHIRP= ok	["a","","T","h","","",[]]	v1.8=CHIRP= err bad-json
 {"ssid":"workshop","pass":"hunter2","token":"TOK-ONE","hwid":"board-1"}	{"key":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="}	CHIRP= ok	["workshop","hunter2","TOK-ONE","board-1","","AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",null]	same
 {"ssid":"workshop","pass":"hunter2","token":"TOK-ONE","hwid":"board-1"}	{"token":"TOK-TWO"}	CHIRP= ok	["workshop","hunter2","TOK-TWO","board-1","","",null]	same
 {"ssid":"workshop","pass":"hunter2","token":"TOK-ONE","hwid":"board-1"}	{"claim":"CHIRP-NEWCODE"}	CHIRP= ok	["workshop","hunter2","CHIRP-NEWCODE","board-1","","",null]	same
@@ -37,7 +37,7 @@
 {"ssid":"workshop","pass":"hunter2","token":"TOK-ONE","hwid":"board-1"}	{}	CHIRP= ok	["workshop","hunter2","TOK-ONE","board-1","","",null]	same
 {"ssid":"workshop","pass":"hunter2","token":"TOK-ONE","hwid":"board-1","aps":[{"ssid":"workshop","pass":"hunter2"},{"ssid":"van","pass":""}]}	{"ssid":"new","pass":"n"}	CHIRP= ok	["new","n","TOK-ONE","board-1","","",null]	same
 {"ssid":"workshop","pass":"hunter2","token":"TOK-ONE","hwid":"board-1","aps":[{"ssid":"workshop","pass":"hunter2"},{"ssid":"van","pass":""}]}	{"token":"T2"}	CHIRP= ok	["workshop","hunter2","T2","board-1","","",[["workshop","hunter2"],["van",""]]]	same
-{"ssid":"workshop","pass":"hunter2","token":"TOK-ONE","hwid":"board-1","aps":[{"ssid":"workshop","pass":"hunter2"},{"ssid":"van","pass":""}]}	{"aps":[{"ssid":"x","pass":"y"}]}	CHIRP= ok	["workshop","hunter2","TOK-ONE","board-1","","",[["x","y"]]]	same
+{"ssid":"workshop","pass":"hunter2","token":"TOK-ONE","hwid":"board-1","aps":[{"ssid":"workshop","pass":"hunter2"},{"ssid":"van","pass":""}]}	{"aps":[{"ssid":"x","pass":"y"}]}	CHIRP= ok	["workshop","hunter2","TOK-ONE","board-1","","",[["x","y"]]]	v1.8=CHIRP= ok
 {"ssid":"s","token":"CHIRP-OLD","hwid":"h"}	{"token":"TOK-NEW"}	CHIRP= ok	["s","","TOK-NEW","h","","",null]	same
 {}	{"ssid":"sssssssssssssssssssssssssssssssss","token":"T","hwid":"h"}	CHIRP= ok	["sssssssssssssssssssssssssssssssss","","T","h","","",null]	stricter
 {}	{"ssid":"s","pass":"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","token":"T","hwid":"h"}	CHIRP= ok	["s","ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","T","h","","",null]	stricter
@@ -48,4 +48,4 @@
 {}	{"ssid":"s","token":"T\r\nX-Injected: 1","hwid":"h"}	CHIRP= ok	["s","","T\r\nX-Injected: 1","h","","",null]	stricter
 {}	{"ssid":"s\t","token":"T","hwid":"h"}	CHIRP= ok	["s\t","","T","h","","",null]	stricter
 {}	{"ssid":"s","token":"T","hwid":"h","level":NaN}	CHIRP= ok	["s","","T","h","","",null]	stricter
-{}	{"ssid":"ssssssssssssssssssssssssssssssss","pass":"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","token":"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt","hwid":"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"}	CHIRP= ok	["ssssssssssssssssssssssssssssssss","pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt","hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh","","",null]	same
+{}	{"ssid":"ssssssssssssssssssssssssssssssss","pass":"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","token":"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt","hwid":"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"}	CHIRP= ok	["ssssssssssssssssssssssssssssssss","pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt","hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh","","",null]	v1.8=CHIRP= err bad-json

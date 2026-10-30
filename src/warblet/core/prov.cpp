@@ -29,6 +29,17 @@ bool accepted(const JsonValue& key) {
   return false;
 }
 
+// A pushed host: 0 to 63 (the field's size) of A-Z a-z 0-9 . and -.
+bool validHost(const char* host) {
+  for (const char* p = host; *p; p++) {
+    char ch = *p;
+    if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '.' ||
+          ch == '-'))
+      return false;
+  }
+  return true;
+}
+
 // A field name the refusal line can carry: 1 to 32 of A-Z a-z 0-9 _ . -.
 bool nameable(const JsonValue& key) {
   if (key.n == 0 || key.n > 32) return false;
@@ -77,19 +88,26 @@ bool validNetworks(const JsonValue& list, Settings& out) {
     if (out.apsCount >= kMaxNetworks) return false;  // refused, not truncated
     Network& n = out.aps[out.apsCount];
     n.ssid[0] = n.pass[0] = '\0';
+    // Exactly an ssid and a pass, nothing else (CHIRP-PROV v1.8).
+    bool hasSsid = false, hasPass = false;
     JsonObject entry(p, (size_t)(q + 1 - p));
     JsonValue k, v;
     while (entry.next(k, v)) {
       if (jsonKeyIs(k, "ssid")) {
         if (!takeString(v, n.ssid, sizeof n.ssid)) return false;
+        hasSsid = true;
       } else if (jsonKeyIs(k, "pass")) {
         if (!takeString(v, n.pass, sizeof n.pass)) return false;
+        hasPass = true;
+      } else {
+        return false;
       }
     }
-    if (!entry.ok() || n.ssid[0] == '\0') return false;
+    if (!entry.ok() || !hasSsid || !hasPass || n.ssid[0] == '\0') return false;
     out.apsCount++;
     p = q + 1;
   }
+  if (out.apsCount == 0) return false;  // the whole list, so at least one network
   out.hasAps = true;
   return true;
 }
@@ -171,16 +189,18 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
   }
 
   merged = stored;
-  bool pushedSsid = false, pushedAps = false, pushedKey = false;
+  bool pushedSsid = false, pushedPass = false, pushedAps = false, pushedKey = false;
   JsonObject o(json, len);
   JsonValue k, v;
   while (o.next(k, v)) {
     bool good = true;
     if (jsonKeyIs(k, "ssid")) {
-      good = takeString(v, merged.ssid, sizeof merged.ssid);
+      // 1 to 32 bytes: 802.11's limit, and an empty one names no network.
+      good = takeString(v, merged.ssid, sizeof merged.ssid) && merged.ssid[0] != '\0';
       pushedSsid = true;
     } else if (jsonKeyIs(k, "pass")) {
       good = takeString(v, merged.pass, sizeof merged.pass);
+      pushedPass = true;
     } else if (jsonKeyIs(k, "aps")) {
       good = validNetworks(v, merged);
       pushedAps = true;
@@ -194,7 +214,7 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
       good = takeString(v, merged.hwId, sizeof merged.hwId) &&
              (merged.hwId[0] == '\0' || validHwId(merged.hwId));
     } else if (jsonKeyIs(k, "host")) {
-      good = takeString(v, merged.host, sizeof merged.host);
+      good = takeString(v, merged.host, sizeof merged.host) && validHost(merged.host);
     } else if (jsonKeyIs(k, "key")) {
       uint8_t raw[kKeyBytes];
       // A key that will sign, never "" (CHIRP-PROV v1.8: a key goes only with
@@ -206,8 +226,16 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
     }
     if (!good) return ProvResult::BadJson;
   }
-  // A top-level ssid without aps names exactly one network (v1.3).
-  if (pushedSsid && !pushedAps) {
+  if (pushedAps) {
+    // aps is the whole list, its first entry tried first. A top-level ssid or
+    // pass sent with it must be that entry's (CHIRP-PROV v1.8).
+    if ((pushedSsid && strcmp(merged.ssid, merged.aps[0].ssid) != 0) ||
+        (pushedPass && strcmp(merged.pass, merged.aps[0].pass) != 0))
+      return ProvResult::BadJson;
+    strcpy(merged.ssid, merged.aps[0].ssid);
+    strcpy(merged.pass, merged.aps[0].pass);
+  } else if (pushedSsid) {
+    // A top-level ssid without aps names exactly one network (v1.3).
     merged.hasAps = false;
     merged.apsCount = 0;
   }

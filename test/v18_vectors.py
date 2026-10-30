@@ -5,7 +5,7 @@ tested against; their checks compare the two).
 
     python test/v18_vectors.py test/chirp-prov-v1.8.json OUT_DIR
 
-OUT_DIR/v18_pushes.txt  stored<TAB>push<TAB>answer<TAB>stores, the pushes of
+OUT_DIR/v18_pushes.txt  stored<TAB>push<TAB>answer<TAB>stores<TAB>after, the pushes of
                         the "token" profile (the library's: it takes a key
                         over USB and sends at Token and Signed)
 OUT_DIR/v18_caps.txt    name<TAB>caps, the valid capability objects
@@ -21,8 +21,10 @@ with open(os.path.join(out, "v18_pushes.txt"), "w", encoding="utf-8", newline="\
     for v in doc["pushes"]:
         if v["profile"] != "token":
             continue
-        stored = json.dumps(v["stored"], separators=(",", ":"))
-        f.write("\t".join([stored, v["push"], v["answer"], "1" if v["stores"] else "0"]) + "\n")
+        stored = json.dumps(v["stored"], separators=(",", ":"), ensure_ascii=False)
+        # after: the settings held afterwards, in the order settingsToJson() writes them
+        after = json.dumps(v["after"], separators=(",", ":"), ensure_ascii=False)
+        f.write("\t".join([stored, v["push"], v["answer"], "1" if v["stores"] else "0", after]) + "\n")
 with open(os.path.join(out, "v18_caps.txt"), "w", encoding="utf-8", newline="\n") as f:
     for v in doc["caps"]["valid"]:
         f.write(v["name"].replace("\t", " ") + "\t" + v["caps"] + "\n")
