@@ -1,9 +1,9 @@
 // Runs the DeskDisplay example, as it is, on the simulated board (test/sim)
 // with a fake screen and touch (fake_screen.cpp) against a fake Warblet. It
 // checks what a person sees and what Warblet gets: the screens' words, the
-// line per computer, one "seen" per message, the not-on-an-account stop, the
-// self-restart, the pace; and that the routine and decoder are the Warblet
-// MicroPython desk display's files, unchanged.
+// line per computer, one "seen" per message, the not-on-an-account stop, no
+// restart while nothing answers, the pace; and that the routine and decoder
+// are the Warblet MicroPython desk display's files, unchanged.
 //
 // What this proves: the sketch's logic and words. It does NOT prove the
 // picture on a real screen (screen_test.cpp checks the driver's bytes).
@@ -330,16 +330,22 @@ int main() {
   runFor(70000);
   check(strip() == "Connected", "and Connected again");
 
-  // ---- the self-restart -----------------------------------------------------------
-  sim.restarts.clear();
-  sim.connectFails = true;
-  runFor(12UL * 60UL * 1000UL);
-  sim.connectFails = false;
-  check(sim.restarts.size() >= 1, "Wi-Fi up, nothing answering for 10 minutes: the board restarts itself");
-  check(booted == 2 && middle().find("Type a message for") == 0,
-        "after that restart the sketch starts afresh: the waiting text, no message");
-  sim.restarts.clear();
-  runFor(70000);
+  // ---- Wi-Fi up, nothing answering: it keeps trying, and keeps the message ---------
+  {
+    int bootNow = booted;
+    size_t restartsNow = sim.restarts.size();
+    sim.connectFails = true;
+    runFor(30UL * 60UL * 1000UL);
+    check(booted == bootNow && sim.restarts.size() == restartsNow,
+          "Wi-Fi up, nothing answering for 30 minutes: the board never restarts itself");
+    check(middle() == "Back soon" && strip() == "Warblet: no answer",
+          "...it keeps the message, and the strip says Warblet: no answer");
+    Serial.out.clear();
+    sim.connectFails = false;
+    runFor(90000);
+    check(said("desk: report stored") && strip() == "Connected",
+          "...and once Warblet answers, a report is stored within 90 s and the strip says Connected");
+  }
 
   // ---- not on an account ----------------------------------------------------------
   unclaimed = true;
@@ -349,8 +355,9 @@ int main() {
   check(!simShows("sim-desk-1") && !simShows("kitchen-pi") && !simShows("Back soon"),
         "unclaimed: neither the id nor anything the account sent stays on the screen");
   before = sim.requests.size();
+  size_t restartsStopped = sim.restarts.size();
   runFor(20UL * 60UL * 1000UL);
-  check(sim.requests.size() == before && !warblet::board::wifiConnected() && sim.restarts.empty(),
+  check(sim.requests.size() == before && !warblet::board::wifiConnected() && sim.restarts.size() == restartsStopped,
         "unclaimed: nothing sent for 20 minutes, Wi-Fi off, no self-restart");
 
   // ---- not on an account, then set up again: a new start, and a hello ---------------
@@ -360,7 +367,7 @@ int main() {
   Serial.type("CHIRP+ {\"ssid\":\"lab\",\"pass\":\"pw\",\"hwid\":\"sim-desk-2\",\"claim\":\"CHIRP-DESK5678\"}\r\n");
   runFor(40000);
   sent = sentFrom(before);
-  check(sim.restarts.size() == restartsBefore + 1 && booted == 3,
+  check(sim.restarts.size() == restartsBefore + 1 && booted == 2,
         "set up again after the stop: the push is a new start (a restart)");
   check(!sent.empty() && sent[0].first == "hello", "set up again: the first report is tagged hello");
   check(strip() == "Connected" && middle() == "Type a message for|sim-desk-2 on your|Warblet dashboard.",
