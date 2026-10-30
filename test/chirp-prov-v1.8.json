@@ -435,6 +435,21 @@
     "key"
    ]
   },
+  "token-tls": {
+   "about": "Wi-Fi firmware at Token and Signed with a plain and an encrypted route of one kind, and a TLS switch: the C6 over MQTT and MQTTS (warblet_mqtt.py). tls is true or false, nothing else.",
+   "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"mqtt\",\"mqtts\"]}",
+   "accepts": [
+    "ssid",
+    "pass",
+    "aps",
+    "hwid",
+    "host",
+    "claim",
+    "token",
+    "key",
+    "tls"
+   ]
+  },
   "thread": {
    "about": "Thread firmware (802.15.4, no Wi-Fi) at Token and Signed: a thread object in place of networks, and its key over USB. It has an id of its own, so a push without hwid is complete.",
    "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"udp\"]}",
@@ -1045,6 +1060,63 @@
     "hwid": "board-1"
    },
    "push": "{\"claim\":\"CHIRP-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a token of 32 two-byte characters: printable ASCII only",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a token with a control character",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok\\u0007en\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a setup code with a character past ASCII",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-ABC\u00c9\"}",
    "answer": "CHIRP= err bad-json",
    "stores": false,
    "after": {
@@ -2195,6 +2267,159 @@
    "answer": "CHIRP= err missing-field",
    "stores": false,
    "after": {}
+  },
+  {
+   "name": "TLS switch: a first setup with tls true",
+   "profile": "token-tls",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"claim\":\"CHIRP-ABCD2345\",\"hwid\":\"board-1\",\"tls\":true}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "CHIRP-ABCD2345",
+    "hwid": "board-1",
+    "tls": true
+   }
+  },
+  {
+   "name": "TLS switch: tls false, the plain route chosen",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":false}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "tls": false
+   }
+  },
+  {
+   "name": "TLS switch: tls true",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "tls": false
+   },
+   "push": "{\"tls\":true}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "tls": true
+   }
+  },
+  {
+   "name": "TLS switch: tls as the text false",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":\"false\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: tls as the number 0",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":0}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: tls null",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":null}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: networks alone keep tls",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "tls": false
+   },
+   "push": "{\"ssid\":\"cafe\",\"pass\":\"p\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "p",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "tls": false
+   }
+  },
+  {
+   "name": "TLS switch: level",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":2}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "Signed only: a first setup with a setup code",

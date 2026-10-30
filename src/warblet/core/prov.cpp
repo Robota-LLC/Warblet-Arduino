@@ -40,6 +40,15 @@ bool validHost(const char* host) {
   return true;
 }
 
+// A claim code or token: printable ASCII only (CHIRP-PROV v1.8), so it is the
+// same number of characters and bytes on every responder.
+bool printableAscii(const char* text) {
+  for (const char* p = text; *p; p++) {
+    if (*p < 0x20 || *p > 0x7E) return false;
+  }
+  return true;
+}
+
 // A field name the refusal line can carry: 1 to 32 of A-Z a-z 0-9 _ . -.
 bool nameable(const JsonValue& key) {
   if (key.n == 0 || key.n > 32) return false;
@@ -208,7 +217,8 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
       // A claim code is stored where the token goes: once redeemed it IS
       // the token (contract §Claim-code-first onboarding). An empty one is
       // refused (CHIRP-PROV v1.8).
-      good = takeString(v, merged.credential, sizeof merged.credential) && merged.credential[0] != '\0';
+      good = takeString(v, merged.credential, sizeof merged.credential) && merged.credential[0] != '\0' &&
+             printableAscii(merged.credential);
     } else if (jsonKeyIs(k, "hwid")) {
       // It goes into the announce line, a topic and a URL.
       good = takeString(v, merged.hwId, sizeof merged.hwId) &&
