@@ -1071,9 +1071,19 @@ void testProv() {
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply &&
             strcmp(r.reply(), "CHIRP! v=1 hw=board-1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}") == 0,
         "after provisioning the announce carries the id");
-  check(feedLine("CHIRP+ " + std::string(kProvLineMax, ' ') + "{}\r\n") == ProvResponder::kReply &&
-            strcmp(r.reply(), "CHIRP= err bad-json") == 0,
-        "a push longer than the line buffer is bad-json, not half-applied");
+  // A line over the limit is thrown away whole, through its line ending: no
+  // answer, and no part of it is read as a command (CHIRP-PROV v1.8).
+  check(feedLine("CHIRP+ " + std::string(kProvLineMax, ' ') + "{}\r\n") == ProvResponder::kNone,
+        "a push longer than the line buffer is thrown away, with no answer");
+  {
+    const std::string inner = "CHIRP+ {\"ssid\":\"s\",\"token\":\"T\",\"hwid\":\"board-2\"}";
+    bool none = true;
+    for (size_t cut = 0; cut < inner.size(); cut++) {
+      std::string line = "CHIRP+ " + std::string(kProvLineMax - 7 - cut, 'j') + inner;
+      none = none && line.size() > kProvLineMax && feedLine(line + "\r\n") == ProvResponder::kNone;
+    }
+    check(none, "a push in the tail of an over-long line, before, across or past the limit, is not read");
+  }
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply, "and the next line is read normally");
   r.setSlug("demo-cyd-desk-display-arduino");
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply &&

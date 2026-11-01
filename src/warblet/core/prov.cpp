@@ -374,9 +374,13 @@ void ProvResponder::setCaps(const char* caps) {
 
 ProvResponder::Event ProvResponder::feed(char c, const Settings& current) {
   if (c == '\r' || c == '\n') {  // the portal sends CRLF; a bare LF is fine too
-    if (len_ == 0 && !overflow_) return kNone;
-    buf_[len_] = '\0';
-    Event e = line(current);
+    // A line over the limit is thrown away whole, through its line ending:
+    // no answer, and no part of it is read as a command (CHIRP-PROV v1.8).
+    Event e = kNone;
+    if (len_ > 0 && !overflow_) {
+      buf_[len_] = '\0';
+      e = line(current);
+    }
     len_ = 0;
     overflow_ = false;
     return e;
@@ -396,7 +400,7 @@ ProvResponder::Event ProvResponder::line(const Settings& current) {
   while (end > p && (end[-1] == ' ' || end[-1] == '\t')) end--;
   size_t n = (size_t)(end - p);
 
-  if (n == 6 && strncmp(p, "CHIRP?", 6) == 0 && !overflow_) {
+  if (n == 6 && strncmp(p, "CHIRP?", 6) == 0) {
     // key_set=1: a key that will sign is held (stored settings and a key
     // from a command check are both checked before they are kept).
     if (provAnnounce(current.hwId, fw_, current.key[0] != '\0', slug_, caps_, reply_, sizeof reply_) == 0)
@@ -405,8 +409,7 @@ ProvResponder::Event ProvResponder::line(const Settings& current) {
   }
   if (n >= 6 && strncmp(p, "CHIRP+", 6) == 0) {
     char field[33] = "";
-    ProvResult r = overflow_ ? ProvResult::BadJson
-                             : applyPush(p + 6, n - 6, current, pending_, field, sizeof field);
+    ProvResult r = applyPush(p + 6, n - 6, current, pending_, field, sizeof field);
     if (r == ProvResult::Ok) return kStore;
     strcpy(reply_, provResultLine(r));
     if (r == ProvResult::Unsupported) {  // "CHIRP= err unsupported <field>": the name, never a value
