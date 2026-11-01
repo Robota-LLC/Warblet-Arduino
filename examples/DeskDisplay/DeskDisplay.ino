@@ -23,6 +23,9 @@
 // change, or the setup page sets your board up as this demo, with its spec,
 // decoder and dashboard.
 const char* DEMO = "demo-cyd-desk-display-arduino";
+// The release in which this demo's bytes last changed. The board tells the
+// setup page (fw=), which reads it against the demo's catalogue entry.
+const char* VERSION = "v1.6.0";
 const unsigned long REPORT_EVERY_MS = 30000;  // a report with the Wi-Fi signal; it also shows Warblet the board is there
 const unsigned long CHECK_EVERY_MS = 5000;    // how often to ask Warblet for new messages
 
@@ -407,6 +410,7 @@ void setup() {
   const char* found = screen::start();
   showGuess();
   board.demo(DEMO);
+  board.firmware(VERSION);
   board.onState(showState);
   board.onCommand(onCommand);
   board.checkCommandsEvery(CHECK_EVERY_MS);
