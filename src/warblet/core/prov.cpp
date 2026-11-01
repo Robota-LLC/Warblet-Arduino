@@ -372,7 +372,12 @@ void ProvResponder::setCaps(const char* caps) {
   if (caps != nullptr && strlen(caps) <= kProvCapsMax) strcpy(caps_, caps);
 }
 
-ProvResponder::Event ProvResponder::feed(char c, const Settings& current) {
+ProvResponder::Event ProvResponder::feed(char c, const Settings& current, unsigned long nowMs) {
+  // A line whose bytes stopped for kProvLineIdleMs will not end now: what
+  // came before the pause is dropped. An over-long line still waits for its
+  // line ending, however long the pause.
+  if (len_ > 0 && !overflow_ && nowMs - lastMs_ >= kProvLineIdleMs) len_ = 0;
+  lastMs_ = nowMs;
   if (c == '\r' || c == '\n') {  // the portal sends CRLF; a bare LF is fine too
     // A line over the limit is thrown away whole, through its line ending:
     // no answer, and no part of it is read as a command (CHIRP-PROV v1.8).

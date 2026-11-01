@@ -1045,10 +1045,11 @@ void testProv() {
   Settings scratch, current;
   current.clear();
   ProvResponder r(scratch);
+  unsigned long nowMs = 0;  // each character 1 ms after the last
   auto feedLine = [&](const std::string& s) {
     ProvResponder::Event last = ProvResponder::kNone;
     for (char ch : s) {
-      ProvResponder::Event e = r.feed(ch, current);
+      ProvResponder::Event e = r.feed(ch, current, ++nowMs);
       if (e != ProvResponder::kNone) last = e;
     }
     return last;
@@ -1085,6 +1086,33 @@ void testProv() {
     check(none, "a push in the tail of an over-long line, before, across or past the limit, is not read");
   }
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply, "and the next line is read normally");
+  {
+    // A push from a browser tab out of view: pieces about a second apart. It
+    // lands. A line whose bytes stop for 1.5 s is given up: what came before
+    // the pause is never joined to what comes after it.
+    const std::string push = "CHIRP+ {\"ssid\":\"s\",\"token\":\"T\",\"hwid\":\"board-paced\"}\r\n";
+    ProvResponder::Event e = ProvResponder::kNone;
+    for (size_t i = 0; i < push.size(); i++) {
+      if (i % 16 == 0) nowMs += 1000;
+      ProvResponder::Event got = r.feed(push[i], current, nowMs);
+      if (got != ProvResponder::kNone) e = got;
+    }
+    check(e == ProvResponder::kStore && strcmp(r.pending().hwId, "board-paced") == 0,
+          "a push in pieces a second apart lands");
+    feedLine("CHIRP+ {\"ssid\":\"s\",");
+    nowMs += 1500;
+    check(feedLine("\"token\":\"T\",\"hwid\":\"board-late\"}\r\n") == ProvResponder::kNone,
+          "a line that stopped for 1.5 s is given up, and what follows is not joined to it");
+    feedLine("CHIRP+ {\"ssid\":");
+    nowMs += 2000;
+    check(feedLine("CHIRP?\r\n") == ProvResponder::kReply && strncmp(r.reply(), "CHIRP! ", 7) == 0,
+          "a probe after a stalled line is answered with the announce");
+    // An over-long line still waits for its line ending, pause or not.
+    feedLine("CHIRP+ " + std::string(kProvLineMax, 'j'));
+    nowMs += 2000;
+    check(feedLine("CHIRP?\r\n") == ProvResponder::kNone && feedLine("CHIRP?\r\n") == ProvResponder::kReply,
+          "an over-long line is thrown away through its line ending, however long the pause");
+  }
   r.setSlug("demo-cyd-desk-display-arduino");
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply &&
             strcmp(r.reply(), "CHIRP! v=1 hw=board-1 fw=warblet-arduino-0.2.0 key_set=0 radios=wifi t=demo-cyd-desk-display-arduino caps={\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"https\"]}") == 0,
@@ -1193,16 +1221,28 @@ void testProvV18(const char* path) {
     ProvResponder::Event e = ProvResponder::kNone;
     std::string text = "CHIRP+ " + fld[1] + "\r\n";
     for (char ch : text) {
-      ProvResponder::Event got = r.feed(ch, stored);
+      ProvResponder::Event got = r.feed(ch, stored, 0);
       if (got != ProvResponder::kNone) e = got;
     }
     std::string answer = e == ProvResponder::kStore ? r.stored(true) : (e == ProvResponder::kReply ? r.reply() : "none");
     checkStr(answer, fld[2], ("v1.8 answer: " + fld[1]).c_str());
     check((e == ProvResponder::kStore) == (fld[3] == "1"), "stored only when ok", fld[1]);
     // The settings held afterwards: the merge on ok, what was stored otherwise.
-    static char held[4096];
-    settingsToJson(e == ProvResponder::kStore ? r.pending() : stored, held, sizeof held);
+    // In the library's own store buffer: a record that does not fit is a push it cannot keep.
+    static char held[kSettingsTextMax];
+    check(settingsToJson(e == ProvResponder::kStore ? r.pending() : stored, held, sizeof held) > 0,
+          "the settings fit the store buffer", fld[1]);
     checkStr(held, fld[4], ("v1.8 settings after: " + fld[1]).c_str());
+    if (e == ProvResponder::kStore) {
+      // Reloaded as the next start reads it: the record parses back to itself.
+      Settings reloaded, blank;
+      reloaded.clear();
+      blank.clear();
+      static char again[kSettingsTextMax];
+      bool back = applyPush(held, strlen(held), blank, reloaded) == ProvResult::Ok &&
+                  settingsToJson(reloaded, again, sizeof again) > 0 && strcmp(again, held) == 0;
+      check(back, "the stored record reloads as itself", fld[1]);
+    }
     n++;
   }
   fclose(f);

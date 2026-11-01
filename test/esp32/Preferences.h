@@ -13,6 +13,12 @@ class Preferences {
     static std::map<std::string, std::string> s;
     return s;
   }
+  // The next put writes its value and still reports failure (0), as NVS does
+  // when the flash fails an operation after the new value is down.
+  static bool& failAfterWrite() {
+    static bool f = false;
+    return f;
+  }
   bool begin(const char* name, bool readOnly) {
     ns_ = name;
     readOnly_ = readOnly;
@@ -29,7 +35,7 @@ class Preferences {
   size_t putString(const char* key, const char* value) {
     if (readOnly_) return 0;
     store()[ns_ + "/" + key] = value;
-    return strlen(value);
+    return failAfterWrite() ? 0 : strlen(value);
   }
   bool remove(const char* key) { return !readOnly_ && store().erase(ns_ + "/" + key) == 1; }
 

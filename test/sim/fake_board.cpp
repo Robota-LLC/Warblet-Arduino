@@ -246,7 +246,7 @@ bool saveRefusedMark(const char* text) {
 bool saveSettings(const char* text, size_t len) {
   if (sim.storeFails) return false;
   sim.stored.assign(text, len);
-  return true;
+  return !sim.storeFailsAfterWrite;
 }
 
 }  // namespace board

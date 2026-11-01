@@ -30,6 +30,7 @@ struct SimState {
   bool silent = false;           // the server takes the request and never answers
   std::string stored;       // the settings record, as saved
   bool storeFails = false;
+  bool storeFailsAfterWrite = false;  // the record is written, and the save still says it failed
   std::string refusedMark;  // the refused-setup fingerprint, as kept
   std::vector<unsigned long> restarts;  // when board::restart() was called
   std::vector<SimRequest> requests;

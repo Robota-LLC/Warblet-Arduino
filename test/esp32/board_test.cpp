@@ -14,8 +14,10 @@
 
 #include <string>
 
+#include "Preferences.h"
 #include "WarbletBoard.h"
 #include "WarbletRoots.h"
+#include "warblet/core/prov.h"
 #include "warblet/core/wire.h"
 #include "WiFiClientSecure.h"
 #include "esp_tls_errors.h"
@@ -91,23 +93,41 @@ int main() {
   check(tls.connectionTimeoutMs == 10000 && tls.handshakeTimeoutS == 15, "TLS: a 10 s connect and 15 s handshake limit");
 
   // ---- settings in NVS -------------------------------------------------------
-  // Warblet.cpp keeps the settings text in a 2,048-byte buffer, so a record
-  // is at most 2,047 characters. Preferences::getString() counts the NUL in
-  // what it returns, as nvs_get_str does: the longest record loads whole.
+  // Warblet.cpp keeps the settings text in a kSettingsTextMax-byte buffer, so
+  // a record is at most one character shorter. Preferences::getString()
+  // counts the NUL in what it returns, as nvs_get_str does: the longest
+  // record loads whole.
   {
-    static char text[2048];
+    static char text[warblet::kSettingsTextMax];
+    const size_t most = warblet::kSettingsTextMax - 1;
     size_t len = 0;
-    for (size_t n : {(size_t)1, (size_t)2000, (size_t)2046, (size_t)2047}) {
+    for (size_t n : {(size_t)1, (size_t)2000, most - 1, most}) {
       std::string record(n, 'r');
       len = 0;
       bool ok = saveSettings(record.c_str(), record.size()) && loadSettings(text, sizeof text, len) && len == n &&
                 memcmp(text, record.data(), n) == 0 && text[n] == '\0';
       check(ok, "settings: a record of " + std::to_string(n) + " characters loads whole at the next start");
     }
-    std::string tooLong(2048, 'r');
+    std::string tooLong(warblet::kSettingsTextMax, 'r');
     len = 0;
     check(saveSettings(tooLong.c_str(), tooLong.size()) && !loadSettings(text, sizeof text, len),
           "settings: a record with no room for its NUL is not loaded cut short");
+
+    // NVS can fail an update and still have written it (ESP_ERR_NVS_REMOVE_FAILED:
+    // the update completes when NVS starts again), and putString() reports 0.
+    // saveSettings() says no, which is the contract's one exception: the next
+    // start may read the new record, and the next save settles it.
+    const std::string first = "{\"hwid\":\"board-maybe\"}", second = "{\"hwid\":\"board-settled\"}";
+    Preferences::failAfterWrite() = true;
+    bool refused = !saveSettings(first.c_str(), first.size());
+    Preferences::failAfterWrite() = false;
+    len = 0;
+    bool readsIt = loadSettings(text, sizeof text, len) && first == text;
+    bool settles = saveSettings(second.c_str(), second.size()) && loadSettings(text, sizeof text, len) &&
+                   second == text;
+    check(refused && readsIt && settles,
+          "settings: a save NVS failed after writing says no; the next start reads the new record, and the "
+          "next save wins");
   }
 
   // ---- the MQTT session's configuration --------------------------------------

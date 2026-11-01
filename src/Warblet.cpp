@@ -36,7 +36,7 @@ const unsigned long kClockWaitMs = 10000UL;
 const unsigned long kClockResyncMs = 6UL * 3600UL * 1000UL;  // a crystal drifts
 const unsigned long kClockAfterRefusalMs = 15UL * 60UL * 1000UL;
 const unsigned long kAnswerWaitMs = 20000UL;
-const size_t kStoreMax = 2048;
+const size_t kStoreMax = kSettingsTextMax;
 const int kTakeAtOnce = 10;       // commands taken one after another before the normal pace
 
 // Static, not on the stack: small boards have small stacks.
@@ -321,7 +321,7 @@ bool Warblet::serviceSetup() {
   while (Serial.available() > 0) {
     int c = Serial.read();
     if (c < 0) break;
-    ProvResponder::Event e = setup_.feed((char)c, settings_);
+    ProvResponder::Event e = setup_.feed((char)c, settings_, millis());
     if (e == ProvResponder::kReply) {
       Serial.println(setup_.reply());
       if (strncmp(setup_.reply(), "CHIRP!", 6) == 0) {

@@ -1204,6 +1204,88 @@ int main() {
     sim.stored = storedBefore;
   }
 
+  // 12k2b. A save the flash reports as failed although the record was written
+  // (an NVS update whose flash operation failed). The contract's one
+  // exception: the board answers store-failed and goes on with what it had;
+  // its next start may read the new record; the next push settles it, with or
+  // without a restart in between.
+  for (int restartBetween = 0; restartBetween < 2; restartBetween++) {
+    std::string storedBefore = sim.stored;
+    sim.server = [&](const SimRequest&) { return answer(202, "Accepted"); };
+    bool answered = false, keptOld = false, nextStartReads = true, settled = false;
+    {
+      Warblet w;
+      w.begin();
+      w.wait(1000);
+      Serial.out.clear();
+      sim.storeFailsAfterWrite = true;
+      Serial.type("CHIRP+ {\"hwid\":\"board-maybe\"}\r\n");
+      w.wait(1000);
+      sim.storeFailsAfterWrite = false;
+      answered = said("CHIRP= err store-failed");
+      Serial.out.clear();
+      Serial.type("CHIRP?\r\n");
+      w.wait(1000);
+      keptOld = said("CHIRP! v=1 hw=") && !said("hw=board-maybe");
+      if (!restartBetween) {
+        Serial.type("CHIRP+ {\"hwid\":\"board-settled\"}\r\n");
+        w.wait(1000);
+      }
+    }
+    if (restartBetween) {
+      Warblet w;
+      w.begin();
+      w.wait(1000);
+      Serial.out.clear();
+      Serial.type("CHIRP?\r\n");
+      w.wait(1000);
+      nextStartReads = said("hw=board-maybe");
+      Serial.type("CHIRP+ {\"hwid\":\"board-settled\"}\r\n");
+      w.wait(1000);
+    }
+    {
+      Warblet w;
+      w.begin();
+      w.wait(1000);
+      Serial.out.clear();
+      Serial.type("CHIRP?\r\n");
+      w.wait(1000);
+      settled = said("hw=board-settled");
+    }
+    check(answered && keptOld && nextStartReads && settled,
+          std::string("a save the flash failed after writing: store-failed, the old settings kept, ") +
+              (restartBetween ? "the next start reads the new record, " : "") +
+              "and the next push settles it" + (restartBetween ? " after a restart" : ""));
+    sim.stored = storedBefore;
+  }
+
+  // 12k2c. A push from a browser tab out of view comes in pieces about a
+  // second apart, and lands; a line whose bytes stop for longer than 1.5 s is
+  // given up, and what comes after the pause is not joined to it.
+  {
+    std::string storedBefore = sim.stored;
+    sim.server = [&](const SimRequest&) { return answer(202, "Accepted"); };
+    Warblet w;
+    w.begin();
+    w.wait(1000);
+    const std::string push = "CHIRP+ {\"host\":\"paced.example.com\"}\r\n";
+    Serial.out.clear();
+    for (size_t i = 0; i < push.size(); i += 12) {
+      Serial.type(push.substr(i, 12));
+      w.wait(1000);
+    }
+    bool landed = said("CHIRP= ok");
+    Serial.out.clear();
+    Serial.type("CHIRP+ {\"host\":");
+    w.wait(2000);
+    Serial.type("\"late.example.com\"}\r\n");
+    w.wait(1000);
+    bool givenUp = !said("CHIRP=");
+    check(landed && givenUp,
+          "a push in pieces a second apart lands; a line that stops for 2 s is given up and not joined to what follows");
+    sim.stored = storedBefore;
+  }
+
   // 12k3. A signing key that arrives over the air resets nothing either: a
   // report held after a refusal stays held, and the next refusal waits twice
   // as long, not a minute again. Only the person at the USB cable starts the

@@ -12,8 +12,18 @@
 namespace warblet {
 
 static const size_t kMaxNetworks = 8;  // CHIRP-PROV v1.1: at most 8 networks
-static const size_t kProvLineMax = 2048;
+// The longest setup line a legal push makes is 3,169 bytes: eight networks
+// of two-byte characters sent as \u escapes (six bytes each), the first one
+// at the top as well, a 128-character id, a 63-character token of
+// backslashes, a host and a key. 4096 is the limit every family uses.
+static const size_t kProvLineMax = 4096;
+// The longest record it can leave is 2,325 bytes of JSON: the same with
+// names and passwords of backslashes, which are stored as two bytes each.
+static const size_t kSettingsTextMax = 3072;
 static const size_t kProvReplyMax = 512;  // CHIRP-PROV v1.8: the longest line a board prints
+// A line whose bytes stop for this long is given up (CHIRP-PROV v1.8): longer
+// than the 1 s a browser tab out of view waits between pieces of a push.
+static const unsigned long kProvLineIdleMs = 1500;
 static const size_t kProvCapsMax = 256;   // ... and the longest capability object
 static const size_t kFirmwareMax = 64;    // fw=: 1 to 64 of A-Z a-z 0-9 . _ -
 // The version a sketch announces when it names none (board.firmware()):
@@ -117,7 +127,7 @@ class ProvResponder {
     kStore,  // store pending(); then print stored(true or false) as one line
   };
   explicit ProvResponder(Settings& scratch);
-  Event feed(char c, const Settings& current);
+  Event feed(char c, const Settings& current, unsigned long nowMs);
   const char* reply() const { return reply_; }
   const Settings& pending() const { return pending_; }
   // The demo slug the announce carries; "" (the default) for none.
@@ -135,6 +145,7 @@ class ProvResponder {
   char buf_[kProvLineMax + 1];
   size_t len_ = 0;
   bool overflow_ = false;
+  unsigned long lastMs_ = 0;  // when the line's last byte came
   // The longest reply is the announce, at most 512 bytes (CHIRP-PROV v1.8):
   // a 128-byte id, a 64-byte version, a 40-byte slug and the capability
   // object take about 450.
