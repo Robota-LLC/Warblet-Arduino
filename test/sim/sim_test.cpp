@@ -90,7 +90,7 @@ bool signatureOk(const SimRequest& r, const char* keyB64) {
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
   setvbuf(stdout, nullptr, _IONBF, 0);  // a crash must not swallow what was already printed
   std::string queued;  // the next command the fake server hands out
   bool claimed = false;
@@ -2038,6 +2038,79 @@ int main() {
     again.begin();
     check(saved && said("settings loaded from this board") && std::string(again.deviceId()) == "sim-list-1",
           "a pass alone on a stored list: saved, and loaded again at the next begin()");
+    sim.stored = kept;
+    warblet::board::wifiStop();
+    Serial.out.clear();
+  }
+
+  // 22. A hidden tab's push to a board that is set up: the vectors' longest
+  // line, in 64-byte pieces a second apart (about 46 s), with no probe before
+  // it and command checks due every 5 s, each blocking 2 s. While the line
+  // arrives the board starts no network operation, and the push lands.
+  if (argc > 1) {
+    std::string longest;
+    FILE* f = fopen(argv[1], "r");
+    static char row[16384];
+    while (f != nullptr && fgets(row, sizeof row, f) != nullptr) {
+      std::string r(row);
+      size_t a = r.find('\t'), b = a == std::string::npos ? a : r.find('\t', a + 1);
+      if (b != std::string::npos && r.compare(b + 1, 9, "CHIRP= ok") == 0 && b - a - 1 > longest.size())
+        longest = r.substr(a + 1, b - a - 1);
+    }
+    if (f != nullptr) fclose(f);
+    check(longest.size() > 2900, "the vectors' longest line is read (" + std::to_string(longest.size()) + " bytes)");
+    std::string kept = sim.stored;
+    sim.stored = "{\"ssid\":\"lab\",\"pass\":\"pw\",\"token\":\"T\",\"hwid\":\"sim-tab-1\"}";
+    unsigned long kept_exchange = sim.exchangeMs;
+    Warblet w;
+    w.begin();
+    w.onCommand(recordCommand);
+    w.wait(6000);
+    sim.exchangeMs = 2000;
+    sim.requests.clear();
+    Serial.out.clear();
+    std::string line = "CHIRP+ " + longest + "\r\n";
+    unsigned long start = millis();
+    for (size_t i = 0, k = 0; i < line.size(); i += 64, k++) Serial.type(line.substr(i, 64), k * 1000);
+    unsigned long end = start + ((line.size() + 63) / 64 - 1) * 1000;
+    w.wait(end - start + 3000);
+    bool quiet = true;
+    for (const auto& r : sim.requests) {
+      if (r.at > start && r.at < end) quiet = false;
+    }
+    check(quiet, "no network operation while a setup line arrives, probe or no probe");
+    check(said("CHIRP= ok\r\n"), "the hidden tab's longest push lands");
+    sim.exchangeMs = kept_exchange;
+    sim.stored = kept;
+    warblet::board::wifiStop();
+    Serial.out.clear();
+  }
+
+  // 23. A credential at its limit, all quotation marks and backslashes (each
+  // doubled in JSON): pushed, saved, read back at the next start, and sent
+  // whole in the request's header.
+  {
+    std::string token, escaped;
+    for (int i = 0; i < 63; i++) {
+      char c = (i % 2 == 0) ? '"' : '\\';
+      token += c;
+      escaped += '\\';
+      escaped += c;
+    }
+    std::string kept = sim.stored;
+    sim.stored.clear();
+    Warblet w;
+    w.begin();
+    Serial.type("CHIRP+ {\"ssid\":\"lab\",\"pass\":\"pw\",\"hwid\":\"sim-quote-1\",\"token\":\"" + escaped + "\"}\r\n");
+    w.wait(100);
+    bool saved = said("CHIRP= ok\r\n");
+    sim.requests.clear();
+    Warblet again;  // the next start, on what was saved
+    again.begin();
+    again.wait(3000);
+    again.sendNumber(7);
+    bool sent = !sim.requests.empty() && sim.requests.back().header("X-Chirp-Token") == token;
+    check(saved && sent, "a 63-character credential of quotes and backslashes: saved, loaded, and sent whole");
     sim.stored = kept;
     warblet::board::wifiStop();
     Serial.out.clear();

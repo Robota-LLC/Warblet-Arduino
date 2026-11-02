@@ -82,9 +82,14 @@ void Warblet::say(const char* text) {
 
 const char* Warblet::host() const { return hostFor(settings_.host, kHttpsHost, hostText); }
 
-// For a while after answering the setup page's probe, the board does nothing
-// but listen on USB, so the push that follows is read as it arrives.
-bool Warblet::setupQuiet() const { return quiet_ && millis() - quietSince_ < kSetupQuietMs; }
+// For a while after answering the setup page's probe, and while a setup line
+// is arriving (up to its idle and overall limits), probe or no probe, the
+// board does nothing but listen on USB, so a push is read as it comes: a
+// network operation that blocked for longer than the idle limit would drop
+// it, and a long one would fill the receive buffer.
+bool Warblet::setupQuiet() const {
+  return (quiet_ && millis() - quietSince_ < kSetupQuietMs) || setup_.lineArriving(millis());
+}
 
 void Warblet::demo(const char* slug) {
   badSlug_ = !validSlug(slug);

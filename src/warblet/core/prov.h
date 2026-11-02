@@ -24,6 +24,9 @@ static const size_t kProvReplyMax = 512;  // CHIRP-PROV v1.8: the longest line a
 // A line whose bytes stop for this long is given up (CHIRP-PROV v1.8): longer
 // than the 1 s a browser tab out of view waits between pieces of a push.
 static const unsigned long kProvLineIdleMs = 1500;
+// A host finishes a line within this of its first byte (CHIRP-PROV v1.8): a
+// 4,096-byte line in 64-byte pieces a second apart takes about 64 s.
+static const unsigned long kProvLineLateMs = 70000;
 static const size_t kProvCapsMax = 256;   // ... and the longest capability object
 static const size_t kFirmwareMax = 64;    // fw=: 1 to 64 of A-Z a-z 0-9 . _ -
 // The version a sketch announces when it names none (board.firmware()):
@@ -138,6 +141,10 @@ class ProvResponder {
   // The capability object the announce carries (provCaps(false, false) unless set).
   void setCaps(const char* caps);
   const char* stored(bool ok) const { return provResultLine(ok ? ProvResult::Ok : ProvResult::StoreFailed); }
+  // True while a setup line (one that starts CHIRP) is arriving: begun, not
+  // over the limit, its last byte under kProvLineIdleMs ago and its first
+  // under kProvLineLateMs ago.
+  bool lineArriving(unsigned long nowMs) const;
 
  private:
   Event line(const Settings& current);
@@ -145,7 +152,8 @@ class ProvResponder {
   char buf_[kProvLineMax + 1];
   size_t len_ = 0;
   bool overflow_ = false;
-  unsigned long lastMs_ = 0;  // when the line's last byte came
+  unsigned long lastMs_ = 0;   // when the line's last byte came
+  unsigned long firstMs_ = 0;  // when its first byte came
   // The longest reply is the announce, at most 512 bytes (CHIRP-PROV v1.8):
   // a 128-byte id, a 64-byte version, a 40-byte slug and the capability
   // object take about 450.

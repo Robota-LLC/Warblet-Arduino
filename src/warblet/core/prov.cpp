@@ -405,11 +405,22 @@ ProvResponder::Event ProvResponder::feed(char c, const Settings& current, unsign
     return e;
   }
   if (len_ < kProvLineMax) {
+    if (len_ == 0) firstMs_ = nowMs;
     buf_[len_++] = c;
   } else {
     overflow_ = true;
   }
   return kNone;
+}
+
+bool ProvResponder::lineArriving(unsigned long nowMs) const {
+  if (len_ == 0 || overflow_ || nowMs - lastMs_ >= kProvLineIdleMs || nowMs - firstMs_ >= kProvLineLateMs)
+    return false;
+  const char* p = buf_;
+  const char* end = buf_ + len_;
+  while (p < end && (*p == ' ' || *p == '\t')) p++;
+  size_t n = (size_t)(end - p);
+  return n > 0 && strncmp(p, "CHIRP", n < 5 ? n : 5) == 0;  // its first bytes count as they come
 }
 
 ProvResponder::Event ProvResponder::line(const Settings& current) {

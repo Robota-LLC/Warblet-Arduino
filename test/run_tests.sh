@@ -74,7 +74,7 @@ echo "ok    every public call and overload is there, with its type and its defin
   test/sim/sim_test.cpp test/sim/fake_board.cpp test/sim/sketch_light.cpp src/Warblet.cpp src/WarbletMqtt.cpp \
   src/warblet/core/sha256.cpp src/warblet/core/text.cpp src/warblet/core/sign.cpp \
   src/warblet/core/wire.cpp src/warblet/core/json.cpp src/warblet/core/prov.cpp
-"$OUT/sim_test"
+"$OUT/sim_test" "$OUT/v18_pushes.txt"
 
 # The ESP32 section of src/WarbletBoard.cpp, unmodified, against stand-ins of
 # the ESP32 core and Espressif's MQTT client (test/esp32), driven with the
