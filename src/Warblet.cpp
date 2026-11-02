@@ -326,10 +326,13 @@ bool Warblet::serviceSetup() {
   // At most kProvLineMax bytes a pass: more than a serial buffer holds, so
   // what waited is read, and input that never pauses cannot hold loop(). A
   // line still coming goes on at the next pass. Finding nothing waiting is a
-  // look at a quiet line, which is how a line that stopped is seen.
+  // look at a quiet line, which is how a line that stopped is seen. The
+  // look's time is read before it: other work can hold the sketch up after
+  // it, and a byte that came then is not one the look saw come.
   for (size_t n = 0; n < kProvLineMax; n++) {
+    unsigned long looked = millis();
     if (Serial.available() <= 0) {
-      setup_.quiet(millis());
+      setup_.quiet(looked);
       break;
     }
     int c = Serial.read();

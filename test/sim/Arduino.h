@@ -102,10 +102,31 @@ class SimSerial {
   void flush() {}
   void setRxBufferSize(size_t n) { rxCap = n; }
   size_t rxCapAtBegin = 0;  // the receive buffer begin() started with (0: not begun)
+  // Other work right after a look that found nothing: once the line has been
+  // seen quiet holdAfterMs (looks that found nothing, as this fake sees them),
+  // the next look that finds nothing again in the same millisecond (the
+  // library's read loop, after its first look of the pass) is followed by
+  // holdMs of it, and holdBytes arrive 5 ms in. A board that reads the clock
+  // after the look sees a later time than the look's. holdAfterMs < 0: off.
+  long holdAfterMs = -1;
+  unsigned long holdMs = 0;
+  std::string holdBytes;
   int available() {
     if (endless > 0) return 1;
     arrive();
-    return (int)rx.size();
+    if (!rx.empty()) {
+      quietSince = -1;
+      return (int)rx.size();
+    }
+    if (quietSince < 0) quietSince = (long)simNowMs;
+    bool again = lastEmptyLook == (long)simNowMs;
+    lastEmptyLook = (long)simNowMs;
+    if (again && holdAfterMs >= 0 && (long)simNowMs - quietSince >= holdAfterMs) {
+      holdAfterMs = -1;
+      for (size_t i = 0; i < holdBytes.size(); i++) wire.push_back(Byte{simNowMs + 5 + i / 64, holdBytes[i]});
+      simNowMs += holdMs;
+    }
+    return 0;
   }
   int read() {
     if (endless > 0) {
@@ -137,6 +158,8 @@ class SimSerial {
   std::string out;
 
  private:
+  long quietSince = -1;     // since when every look has found nothing (-1: the last found a byte)
+  long lastEmptyLook = -1;  // when the last look that found nothing was
   struct Byte {
     unsigned long at;
     char c;

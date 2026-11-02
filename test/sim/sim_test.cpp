@@ -165,6 +165,47 @@ int main(int argc, char** argv) {
     Serial.out.clear();
   }
 
+  // 0c. A look at Serial that finds nothing carries the time read before it:
+  // other work right after that look, 1,490 ms into a quiet the board saw,
+  // with the rest of the line arriving 5 ms in and the board back 20 ms
+  // later, is not a pause it saw. The rest joins the line, one being read
+  // and one being thrown away alike.
+  {
+    std::string kept = sim.stored;
+    sim.stored.clear();
+    Warblet w;
+    w.begin();
+    Serial.out.clear();
+    Serial.type("CHIRP+ {\"ssid\":\"lab\",\"pass\":\"pw\",");
+    Serial.holdAfterMs = 1490;
+    Serial.holdMs = 20;
+    Serial.holdBytes = "\"hwid\":\"sim-held\",\"token\":\"T\"}\r\n";
+    w.wait(3000);
+    check(said("CHIRP= ok\r\n") && std::string(w.deviceId()) == "sim-held",
+          "held off after a look that found nothing at 1,490 ms: the rest that came meanwhile joins the line");
+    size_t cap = Serial.rxCap;
+    Serial.rxCap = 8192;  // the whole over-limit line waits; none of it is lost
+    Serial.out.clear();
+    Serial.type("CHIRP+ " + std::string(warblet::kProvLineMax + 100, 'j'));
+    Serial.holdAfterMs = 1490;
+    Serial.holdMs = 20;
+    Serial.holdBytes = "CHIRP?\r\n";  // still the over-limit line: read afresh, it would be a probe
+    w.wait(3000);
+    bool none = !said("CHIRP!");
+    Serial.type("CHIRP?\r\n");
+    w.wait(100);
+    check(none && occurrences("CHIRP! ") == 1,
+          "held off after a look that found nothing at 1,490 ms: an over-limit line's tail is dropped, one "
+          "announce, for the probe after it");
+    Serial.rxCap = cap;
+    sim.stored = kept;
+    warblet::board::wifiStop();
+    sim.wifiBegins = 0;
+    sim.joins.clear();
+    sim.requests.clear();
+    Serial.out.clear();
+  }
+
   // 1. Nothing stored: the board waits for the setup page, and says so once.
   setup();
   run(5);
