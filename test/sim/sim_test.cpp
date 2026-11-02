@@ -2000,6 +2000,23 @@ int main() {
     check(!said(kKey2), "MQTT: the key is never printed");
   }
 
+  // 20. Input that never pauses cannot hold the loop (as MicroPython's
+  // service() since round 10): one pass reads at most kProvLineMax bytes of
+  // it, and goes on; the rest waits for the next pass.
+  {
+    Warblet w;
+    w.begin();
+    w.loop();
+    Serial.endless = 1000000;
+    w.loop();
+    size_t read = 1000000 - Serial.endless;
+    check(read <= warblet::kProvLineMax, "a pass reads at most kProvLineMax bytes of input that never pauses (read " +
+                                    std::to_string(read) + ")");
+    w.loop();
+    check(1000000 - Serial.endless > read, "...and the next pass reads on");
+    Serial.endless = 0;
+  }
+
   printf("\nsim: %d passed, %d failed\n%s\n", pass, fail, fail ? "FAILED" : "PASSED");
   return fail ? 1 : 0;
 }

@@ -103,10 +103,15 @@ class SimSerial {
   void setRxBufferSize(size_t n) { rxCap = n; }
   size_t rxCapAtBegin = 0;  // the receive buffer begin() started with (0: not begun)
   int available() {
+    if (endless > 0) return 1;
     arrive();
     return (int)rx.size();
   }
   int read() {
+    if (endless > 0) {
+      endless--;
+      return 'x';
+    }
     arrive();
     if (rx.empty()) return -1;
     unsigned char c = (unsigned char)rx[0];
@@ -118,6 +123,7 @@ class SimSerial {
     for (size_t i = 0; i < s.size(); i++) wire.push_back(Byte{(unsigned long)(simNowMs + afterMs + i / 64), s[i]});
   }
   size_t rxCap = 256;  // the ESP32 core's default
+  size_t endless = 0;  // bytes of input that never pauses still to come (0: off)
   size_t dropped = 0;
   std::string rx;
   void print(const char* s) { out += s; }

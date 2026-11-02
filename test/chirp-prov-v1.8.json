@@ -590,6 +590,26 @@
    }
   },
   {
+   "name": "the empty host clears a stored one: Warblet's own again",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "host": "core.example.com"
+   },
+   "push": "{\"host\":\"\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
    "name": "a host of 63 characters",
    "profile": "token",
    "stored": {
@@ -792,6 +812,67 @@
     "token": "tok-0123456789",
     "hwid": "board-1",
     "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
+  },
+  {
+   "name": "a token with another id starts a new device: the key goes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"hwid\":\"board-2\",\"token\":\"tok-2\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-2",
+    "hwid": "board-2"
+   }
+  },
+  {
+   "name": "a setup code with the id the board already has still starts a new device: the key goes",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"claim\":\"CHIRP-NEWCODE1\",\"hwid\":\"board-1\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "CHIRP-NEWCODE1",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "another id that brings its own key keeps that one",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"hwid\":\"board-2\",\"key\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-2",
+    "key": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
    }
   },
   {
@@ -1314,6 +1395,45 @@
    "after": {
     "ssid": "home",
     "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a pass alone with a list stored is the first network's: the list keeps the rest",
+   "profile": "token",
+   "stored": {
+    "ssid": "cafe",
+    "pass": "p1",
+    "aps": [
+     {
+      "ssid": "cafe",
+      "pass": "p1"
+     },
+     {
+      "ssid": "office",
+      "pass": "p2"
+     }
+    ],
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"new-pass\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "new-pass",
+    "aps": [
+     {
+      "ssid": "cafe",
+      "pass": "new-pass"
+     },
+     {
+      "ssid": "office",
+      "pass": "p2"
+     }
+    ],
     "token": "tok-0123456789",
     "hwid": "board-1"
    }
@@ -1926,6 +2046,24 @@
    "after": {}
   },
   {
+   "name": "a first setup with a setup code and no id: the id is pushed, never taken from the announce",
+   "profile": "token",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"claim\":\"CHIRP-ABCD2345\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {}
+  },
+  {
+   "name": "a first setup with an empty id",
+   "profile": "token",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"claim\":\"CHIRP-ABCD2345\",\"hwid\":\"\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {}
+  },
+  {
    "name": "Open: a first setup with its own host",
    "profile": "open",
    "stored": {},
@@ -1973,6 +2111,43 @@
      {
       "ssid": "cafe",
       "pass": "p1"
+     },
+     {
+      "ssid": "office",
+      "pass": "p2"
+     }
+    ],
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a pass alone with a list stored is the first network's",
+   "profile": "open",
+   "stored": {
+    "ssid": "cafe",
+    "pass": "p1",
+    "aps": [
+     {
+      "ssid": "cafe",
+      "pass": "p1"
+     },
+     {
+      "ssid": "office",
+      "pass": "p2"
+     }
+    ],
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"new-pass\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "cafe",
+    "pass": "new-pass",
+    "aps": [
+     {
+      "ssid": "cafe",
+      "pass": "new-pass"
      },
      {
       "ssid": "office",
@@ -2293,6 +2468,15 @@
    "profile": "open",
    "stored": {},
    "push": "{\"ssid\":\"home\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {}
+  },
+  {
+   "name": "Open: a first setup with an empty id",
+   "profile": "open",
+   "stored": {},
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\",\"hwid\":\"\"}",
    "answer": "CHIRP= err missing-field",
    "stores": false,
    "after": {}

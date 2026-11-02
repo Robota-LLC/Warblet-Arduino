@@ -248,6 +248,11 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
     // A top-level ssid without aps names exactly one network (v1.3).
     merged.hasAps = false;
     merged.apsCount = 0;
+  } else if (pushedPass && merged.hasAps && merged.apsCount > 0) {
+    // A pass alone is the password of the network tried first, the list's
+    // first entry: it changes there too, and the list keeps the rest. Stored
+    // any other way, the record would not load at the next start.
+    strcpy(merged.aps[0].pass, merged.pass);
   }
   // A setup code, or an id other than the stored one, starts a new device.
   // Ids are compared byte for byte, as Warblet looks a device up: sensor and

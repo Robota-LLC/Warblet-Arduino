@@ -318,7 +318,10 @@ bool Warblet::serviceSetup() {
   if (typed_) return false;  // the settings live in the sketch
   bool changed = false;
   if (Serial.available() > 0) refreshCaps();
-  while (Serial.available() > 0) {
+  // At most kProvLineMax bytes a pass: more than a serial buffer holds, so
+  // what waited is read, and input that never pauses cannot hold loop(). A
+  // line still coming goes on at the next pass.
+  for (size_t n = 0; n < kProvLineMax && Serial.available() > 0; n++) {
     int c = Serial.read();
     if (c < 0) break;
     ProvResponder::Event e = setup_.feed((char)c, settings_, millis());
