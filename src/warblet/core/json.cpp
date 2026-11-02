@@ -301,15 +301,21 @@ void JsonWriter::raw(const char* s) {
 
 void JsonWriter::string(const char* s) {
   static const char H[] = "0123456789abcdef";
+  // The short escapes JSON has, as every JSON writer writes them: the control
+  // character at kShort[i] is written \ and kLetter[i]. One array, so the
+  // index is a difference of two pointers into it.
+  static const char kShort[] = "\b\f\n\r\t";
+  static const char kLetter[] = "bfnrt";
   put('"');
   for (; *s; s++) {
     unsigned char c = (unsigned char)*s;
+    const char* at = c ? strchr(kShort, c) : nullptr;
     if (c == '"' || c == '\\') {
       put('\\');
       put((char)c);
-    } else if (c && strchr("\b\f\n\r\t", c)) {
-      put('\\');  // the short escapes JSON has, as every JSON writer writes them
-      put("bfnrt"[strchr("\b\f\n\r\t", c) - "\b\f\n\r\t"]);
+    } else if (at != nullptr) {
+      put('\\');
+      put(kLetter[at - kShort]);
     } else if (c < 0x20) {
       put('\\'); put('u'); put('0'); put('0');
       put(H[c >> 4]);

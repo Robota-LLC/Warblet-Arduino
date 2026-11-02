@@ -899,6 +899,22 @@ void testProv() {
          ProvResult::BadJson, "a line break in host cannot add a request header");
   expect("{\"ssid\":\"s\",\"token\":\"T\\r\\nX-Injected: 1\",\"hwid\":\"h\"}", ProvResult::BadJson,
          "a line break in the token cannot add a request header");
+  {
+    // The record writer's escapes: the five short ones JSON has, \u00XX for the
+    // other controls, a quote and a backslash; DEL and a two-byte character as
+    // they are. Read back, the text is the text written.
+    const std::string in = std::string("\b\f\n\r\t") + "\x01" "\x1f" "\"\\" "\x7f" "\xc3\xa9";
+    char out[128];
+    JsonWriter w(out, sizeof out);
+    w.string(in.c_str());
+    const std::string want = std::string("\"\\b\\f\\n\\r\\t\\u0001\\u001f\\\"\\\\") + "\x7f" "\xc3\xa9" "\"";
+    check(w.done() > 0 && want == out, "the record writer's escapes, short and \\u00XX", out);
+    const std::string doc = std::string("{\"v\":") + out + "}";
+    JsonObject o(doc.data(), doc.size());
+    JsonValue k, v;
+    char back[64];
+    check(o.next(k, v) && jsonString(v, back, sizeof back) >= 0 && in == back, "  ... read back as written");
+  }
   // A network's name and password take no control character either (CHIRP-PROV v1.8).
   expect("{\"ssid\":\"s\\t\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson, "a tab in the Wi-Fi name");
   expect("{\"ssid\":\"s\",\"pass\":\"p\\u007f\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson,
