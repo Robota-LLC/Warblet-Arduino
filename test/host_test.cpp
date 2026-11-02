@@ -1197,6 +1197,7 @@ void testProv() {
 }
 
 // test/prov_vectors.txt, written by test/prov_oracle.py from the demos'
+// chirp_prov.py run on CPython: stored<TAB>push<TAB>answer<TAB>saved<TAB>kind.
 std::string canonical(const Settings& s) {
   static char buf[4096];
   JsonWriter w(buf, sizeof buf);

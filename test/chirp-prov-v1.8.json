@@ -2185,11 +2185,11 @@
     "hwid": "board-1"
    },
    "push": "{\"pass\":\"p\\tw\"}",
-   "answer": "CHIRP= ok",
-   "stores": true,
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
    "after": {
     "ssid": "home",
-    "pass": "p\tw",
+    "pass": "pw",
     "token": "tok-0123456789",
     "hwid": "board-1"
    }
@@ -2204,10 +2204,200 @@
     "hwid": "board-1"
    },
    "push": "{\"ssid\":\"ho\\tme\",\"pass\":\"pw\"}",
-   "answer": "CHIRP= ok",
-   "stores": true,
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
    "after": {
-    "ssid": "ho\tme",
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an ssid with \\u0001",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"ssid\":\"ho\\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a pass with \\u0001",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"ssid\":\"home\",\"pass\":\"p\\u0001w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a network in aps whose name has an escaped tab",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"aps\":[{\"ssid\":\"ho\\tme\",\"pass\":\"pw\"},{\"ssid\":\"home\",\"pass\":\"pw\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a network in aps whose password has \\u0001",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"aps\":[{\"ssid\":\"home\",\"pass\":\"pw\"},{\"ssid\":\"cafe\",\"pass\":\"p\\u0001w\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a raw tab in a pass",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\tw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a raw 0x01 in an ssid",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a raw DEL in a pass",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\u007fw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an escaped DEL in an ssid",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\\u007fme\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an unknown field holding an escaped NUL",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"unknown\":\"\\u0000\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an escaped NUL deep in an unknown field's value",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"extra\":{\"deep\":[\"fine\",\"\\u0000\"]}}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
     "pass": "pw",
     "token": "tok-0123456789",
     "hwid": "board-1"
@@ -2730,11 +2920,181 @@
     "hwid": "board-1"
    },
    "push": "{\"pass\":\"p\\tw\"}",
-   "answer": "CHIRP= ok",
-   "stores": true,
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
    "after": {
     "ssid": "home",
-    "pass": "p\tw",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an ssid with \\u0001",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"board-2\",\"ssid\":\"ho\\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a pass with \\u0001",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"board-2\",\"ssid\":\"home\",\"pass\":\"p\\u0001w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a network in aps whose name has an escaped tab",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"board-2\",\"aps\":[{\"ssid\":\"ho\\tme\",\"pass\":\"pw\"},{\"ssid\":\"home\",\"pass\":\"pw\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a network in aps whose password has \\u0001",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"board-2\",\"aps\":[{\"ssid\":\"home\",\"pass\":\"pw\"},{\"ssid\":\"cafe\",\"pass\":\"p\\u0001w\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a raw tab in a pass",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\tw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a raw 0x01 in an ssid",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a raw DEL in a pass",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\u007fw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an escaped DEL in an ssid",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\\u007fme\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an unknown field holding an escaped NUL",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"board-2\",\"unknown\":\"\\u0000\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: an escaped NUL deep in an unknown field's value",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"board-2\",\"extra\":{\"deep\":[\"fine\",\"\\u0000\"]}}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
     "hwid": "board-1"
    }
   },
@@ -2938,11 +3298,201 @@
     "hwid": "board-1"
    },
    "push": "{\"pass\":\"p\\tw\"}",
-   "answer": "CHIRP= ok",
-   "stores": true,
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
    "after": {
     "ssid": "home",
-    "pass": "p\tw",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: an ssid with \\u0001",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"ssid\":\"ho\\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: a pass with \\u0001",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"ssid\":\"home\",\"pass\":\"p\\u0001w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: a network in aps whose name has an escaped tab",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"aps\":[{\"ssid\":\"ho\\tme\",\"pass\":\"pw\"},{\"ssid\":\"home\",\"pass\":\"pw\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: a network in aps whose password has \\u0001",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"aps\":[{\"ssid\":\"home\",\"pass\":\"pw\"},{\"ssid\":\"cafe\",\"pass\":\"p\\u0001w\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: a raw tab in a pass",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\tw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: a raw 0x01 in an ssid",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: a raw DEL in a pass",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\u007fw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: an escaped DEL in an ssid",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\\u007fme\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: an unknown field holding an escaped NUL",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"unknown\":\"\\u0000\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: an escaped NUL deep in an unknown field's value",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"extra\":{\"deep\":[\"fine\",\"\\u0000\"]}}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
     "token": "tok-0123456789",
     "hwid": "board-1"
    }
@@ -3086,11 +3636,201 @@
     "hwid": "board-1"
    },
    "push": "{\"pass\":\"p\\tw\"}",
-   "answer": "CHIRP= ok",
-   "stores": true,
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
    "after": {
     "ssid": "home",
-    "pass": "p\tw",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: an ssid with \\u0001",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"ssid\":\"ho\\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a pass with \\u0001",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"ssid\":\"home\",\"pass\":\"p\\u0001w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a network in aps whose name has an escaped tab",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"aps\":[{\"ssid\":\"ho\\tme\",\"pass\":\"pw\"},{\"ssid\":\"home\",\"pass\":\"pw\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a network in aps whose password has \\u0001",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"aps\":[{\"ssid\":\"home\",\"pass\":\"pw\"},{\"ssid\":\"cafe\",\"pass\":\"p\\u0001w\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a raw tab in a pass",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\tw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a raw 0x01 in an ssid",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a raw DEL in a pass",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\u007fw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: an escaped DEL in an ssid",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\\u007fme\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: an unknown field holding an escaped NUL",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"unknown\":\"\\u0000\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: an escaped NUL deep in an unknown field's value",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"extra\":{\"deep\":[\"fine\",\"\\u0000\"]}}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
     "token": "tok-0123456789",
     "hwid": "board-1"
    }
@@ -3392,6 +4132,69 @@
     "hwid": "board-1"
    },
    "push": "{\"token\":\"abc\\u0000suffix\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: an unknown field holding an escaped NUL",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"unknown\":\"\\u0000\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: an escaped NUL deep in an unknown field's value",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"extra\":{\"deep\":[\"fine\",\"\\u0000\"]}}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: an ignored member of thread holding an escaped NUL, next to a valid dataset",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"thread\":{\"dataset\":\"0e080000000000020000\",\"note\":\"\\u0000\"}}",
    "answer": "CHIRP= err bad-json",
    "stores": false,
    "after": {
@@ -3811,11 +4614,174 @@
     "hwid": "board-1"
    },
    "push": "{\"ssid\":\"home\",\"pass\":\"p\\tw\"}",
-   "answer": "CHIRP= ok",
-   "stores": true,
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
    "after": {
-    "ssid": "home",
-    "pass": "p\tw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an ssid with \\u0001",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"ssid\":\"ho\\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a pass with \\u0001",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"ssid\":\"home\",\"pass\":\"p\\u0001w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a network in aps whose name has an escaped tab",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"aps\":[{\"ssid\":\"ho\\tme\",\"pass\":\"pw\"},{\"ssid\":\"home\",\"pass\":\"pw\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a network in aps whose password has \\u0001",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"aps\":[{\"ssid\":\"home\",\"pass\":\"pw\"},{\"ssid\":\"cafe\",\"pass\":\"p\\u0001w\"}]}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a raw tab in a pass",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\tw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a raw 0x01 in an ssid",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\u0001me\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a raw DEL in a pass",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\u007fw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an escaped DEL in an ssid",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\\u007fme\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an unknown field holding an escaped NUL",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"unknown\":\"\\u0000\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an escaped NUL deep in an unknown field's value",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"extra\":{\"deep\":[\"fine\",\"\\u0000\"]}}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an ignored member of thread holding an escaped NUL, next to a valid dataset",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok-new-0042\",\"thread\":{\"dataset\":\"0e080000000000020000\",\"note\":\"\\u0000\"}}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
     "token": "tok-0123456789",
     "hwid": "board-1"
    }
@@ -3839,49 +4805,49 @@
    "name": "the longest record: eight networks named and keyed in backslashes, a 31-character id, a 63-character token of backslashes, a host and a key",
    "profile": "token",
    "stored": {},
-   "push": "{\"aps\":[{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\0\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\1\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\2\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\3\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\4\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\5\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\6\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\7\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}],\"hwid\":\"longest-board-id-0123456789abcd\",\"token\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"host\":\"https.warbletiot.com\",\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "push": "{\"aps\":[{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},{\"ssid\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"pass\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}],\"hwid\":\"longest-board-id-0123456789abcd\",\"token\":\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\"host\":\"longest.host-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
    "answer": "CHIRP= ok",
    "stores": true,
    "after": {
-    "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\0",
-    "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+    "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+    "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
     "aps": [
      {
-      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\0",
-      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
      },
      {
-      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\1",
-      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
      },
      {
-      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\2",
-      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
      },
      {
-      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\3",
-      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
      },
      {
-      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\4",
-      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
      },
      {
-      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\5",
-      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
      },
      {
-      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\6",
-      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
      },
      {
-      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\7",
-      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+      "ssid": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
+      "pass": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
      }
     ],
     "token": "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
     "hwid": "longest-board-id-0123456789abcd",
-    "host": "https.warbletiot.com",
+    "host": "longest.host-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
    }
   },

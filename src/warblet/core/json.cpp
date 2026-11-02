@@ -42,6 +42,9 @@ bool scanString(const char*& p, const char* end, const char*& s, size_t& n) {
         for (int i = 1; i <= 4; i++) {
           if (p + i >= end || hexDigit(p[i]) < 0) return false;
         }
+        // An escaped NUL is refused wherever it is, before any field is
+        // chosen (CHIRP-PROV v1.8): the whole text is not taken.
+        if (p[1] == '0' && p[2] == '0' && p[3] == '0' && p[4] == '0') return false;
         p += 4;
       } else if (!strchr("\"\\/bfnrt", e) || e == '\0') {
         return false;

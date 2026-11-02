@@ -24,9 +24,9 @@ with open(os.path.join(out, "v18_pushes.txt"), "w", encoding="utf-8", newline="\
         stored = json.dumps(v["stored"], separators=(",", ":"), ensure_ascii=False)
         # after: the settings held afterwards, in the order settingsToJson() writes them
         after = json.dumps(v["after"], separators=(",", ":"), ensure_ascii=False)
-        # A raw NUL cannot ride in a text line: <NUL> stands for it, and the
-        # test puts the byte back.
-        push = v["push"].replace("\x00", "<NUL>")
+        # A raw NUL cannot ride in a text line, nor a raw tab in a line split
+        # at tabs: <NUL> and <TAB> stand for them, and the test puts the bytes back.
+        push = v["push"].replace("\x00", "<NUL>").replace("\t", "<TAB>")
         f.write("\t".join([stored, push, v["answer"], "1" if v["stores"] else "0", after]) + "\n")
 with open(os.path.join(out, "v18_caps.txt"), "w", encoding="utf-8", newline="\n") as f:
     for v in doc["caps"]["valid"]:
