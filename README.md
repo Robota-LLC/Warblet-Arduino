@@ -90,6 +90,8 @@ If its device was deleted, or its setup code was never used, Warblet answers the
 
 It stays stopped after a restart. To start it again, set it up over USB at warbletiot.com/flash; changing only the Wi-Fi does not count. A board whose settings are typed into `board.begin()` starts again with new settings typed in and uploaded. The board keeps a short fingerprint of the refused setup, never the code itself.
 
+To name your own firmware in USB setup, call `board.firmware("my-project-1.0")` before `begin()`. The library supplies its own version if you omit this. See the [reference](docs/REFERENCE.md) for setup field and transfer limits.
+
 ## The library uses `Serial`
 
 `board.begin()` starts `Serial` at 115200 baud, with a 2 KB receive buffer on ESP32 boards, so call it before any `Serial.begin()`. The library reads every byte that arrives on `Serial`: it answers the setup page's lines, which start with `CHIRP?` and `CHIRP+`, and discards everything else. A sketch that reads `Serial` itself will not see that input.
