@@ -1162,11 +1162,17 @@ void testProv() {
     nowMs += 2000;
     check(feedLine("CHIRP?\r\n") == ProvResponder::kReply && strncmp(r.reply(), "CHIRP! ", 7) == 0,
           "a probe after a stalled line is answered with the announce");
-    // An over-long line still waits for its line ending, pause or not.
+    // A pause gives up a line over the limit too (CHIRP-PROV v1.8): the first
+    // probe after it is answered. Without a pause, the rest of such a line is
+    // still thrown away through its line ending.
     feedLine("CHIRP+ " + std::string(kProvLineMax, 'j'));
     nowMs += 2000;
-    check(feedLine("CHIRP?\r\n") == ProvResponder::kNone && feedLine("CHIRP?\r\n") == ProvResponder::kReply,
-          "an over-long line is thrown away through its line ending, however long the pause");
+    check(feedLine("CHIRP?\r\n") == ProvResponder::kReply && strncmp(r.reply(), "CHIRP! ", 7) == 0,
+          "the first probe after a line over the limit stopped for 2 s is answered");
+    feedLine("CHIRP+ " + std::string(kProvLineMax, 'j'));
+    nowMs += 1000;
+    check(feedLine("jjjCHIRP?\r\n") == ProvResponder::kNone && feedLine("CHIRP?\r\n") == ProvResponder::kReply,
+          "without a pause, the rest of a line over the limit is thrown away through its line ending");
   }
   r.setSlug("demo-cyd-desk-display-arduino");
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply &&
