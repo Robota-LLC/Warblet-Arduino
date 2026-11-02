@@ -118,12 +118,9 @@ def stricter(push_text):
             continue
         if len(value.encode("utf-8")) > LIMITS[name]:
             return True
-        # A network's name and password take any character but NUL (CHIRP-PROV
-        # v1.8); every other text refuses control characters.
-        if name in ("ssid", "pass"):
-            if "\x00" in value:
-                return True
-        elif any(ord(c) < 0x20 or ord(c) == 0x7F for c in value):
+        # A control character (below 0x20, or 0x7f) in any string, a network's
+        # name and password included (CHIRP-PROV v1.8).
+        if any(ord(c) < 0x20 or ord(c) == 0x7F for c in value):
             return True
     key = push.get("key")
     if isinstance(key, str) and key:

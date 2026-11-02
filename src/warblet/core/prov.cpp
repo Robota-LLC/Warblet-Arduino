@@ -19,11 +19,12 @@ bool takeString(const JsonValue& v, char* field, size_t cap) {
   return v.type == JsonValue::kString && jsonString(v, field, cap) >= 0 && !hasControlChar(field);
 }
 
-// A network's name or password: any character but NUL (CHIRP-PROV v1.8), so
-// a tab or another control character, sent escaped, is kept. jsonString()
-// refuses an escaped NUL, and the parser a raw control character.
+// A network's name or password, held to the rule every string is: no control
+// character, below 0x20 or 0x7f, raw or escaped (CHIRP-PROV v1.8). That keeps
+// each stored byte at two record bytes or fewer, the bound kSettingsTextMax is
+// sized by; a byte at or above 0x80 is written as it is.
 bool takeNetworkText(const JsonValue& v, char* field, size_t cap) {
-  return v.type == JsonValue::kString && jsonString(v, field, cap) >= 0;
+  return takeString(v, field, cap);
 }
 
 // The push fields the library acts on (CHIRP-PROV v1.8); any other is refused.

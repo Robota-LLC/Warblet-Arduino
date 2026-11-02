@@ -899,10 +899,46 @@ void testProv() {
          ProvResult::BadJson, "a line break in host cannot add a request header");
   expect("{\"ssid\":\"s\",\"token\":\"T\\r\\nX-Injected: 1\",\"hwid\":\"h\"}", ProvResult::BadJson,
          "a line break in the token cannot add a request header");
-  // A network's name and password take any character but NUL (CHIRP-PROV v1.8).
-  expect("{\"ssid\":\"s\\t\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::Ok, "a tab in the Wi-Fi name");
-  expect("{\"ssid\":\"s\",\"pass\":\"p\\u007f\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::Ok,
+  // A network's name and password take no control character either (CHIRP-PROV v1.8).
+  expect("{\"ssid\":\"s\\t\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson, "a tab in the Wi-Fi name");
+  expect("{\"ssid\":\"s\",\"pass\":\"p\\u007f\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson,
          "a DEL in the password");
+  expect("{\"ssid\":\"s\",\"pass\":\"p\\u0001\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson,
+         "a \\u0001 in the password");
+  expect("{\"ssid\":\"s\",\"pass\":\"p\xc3\xa9\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::Ok,
+         "a two-byte character in the password is kept");
+  {
+    // The library's own longest record: every network's name and password all
+    // backslashes at their bounds, the longest token of backslashes, the
+    // 128-character id it holds, a 63-character host and a key. It fits the
+    // store buffer and reloads as itself; passwords of control characters,
+    // six record bytes each, are refused.
+    std::string nets, ctl;
+    for (int i = 0; i < 8; i++) {
+      nets += std::string(i ? "," : "") + "{\"ssid\":\"" + std::string(64, '\\') + "\",\"pass\":\"" +
+              std::string(128, '\\') + "\"}";
+      ctl += std::string(i ? "," : "") + "{\"ssid\":\"net\",\"pass\":\"";
+      for (int k = 0; k < 64; k++) ctl += "\\u0001";
+      ctl += "\"}";
+    }
+    std::string longest = "{\"aps\":[" + nets + "],\"token\":\"" + std::string(126, '\\') + "\",\"hwid\":\"" +
+                          std::string(128, 'h') + "\",\"host\":\"" + std::string(63, 'n') +
+                          "\",\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}";
+    Settings empty, got, again;
+    empty.clear();
+    got.clear();
+    again.clear();
+    static char rec[kSettingsTextMax], rec2[kSettingsTextMax];
+    bool taken = applyPush(longest.data(), longest.size(), empty, got) == ProvResult::Ok;
+    size_t n = taken ? settingsToJson(got, rec, sizeof rec) : 0;
+    check(taken && n > 0, "the library's longest record is taken and fits its store buffer");
+    check(n > 0 && applyPush(rec, strlen(rec), empty, again) == ProvResult::Ok &&
+              settingsToJson(again, rec2, sizeof rec2) > 0 && strcmp(rec, rec2) == 0,
+          "  ... and reloads as itself");
+    printf("      the library's longest record: %u of %u bytes\n", (unsigned)strlen(rec), (unsigned)kSettingsTextMax);
+    std::string refused = "{\"aps\":[" + ctl + "],\"token\":\"T\",\"hwid\":\"h\"}";
+    expect(refused.c_str(), ProvResult::BadJson, "passwords of control characters (six record bytes each)");
+  }
   expect("{\"ssid\":\"s\",\"pass\":\"p\\u0000w\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson,
          "a NUL in the password");
   expect("{\"ssid\":\"s\",\"token\":\"T\",\"hwid\":\"h\",\"aps\":[{\"ssid\":\"a\\nb\"}]}", ProvResult::BadJson,
@@ -1161,7 +1197,6 @@ void testProv() {
 }
 
 // test/prov_vectors.txt, written by test/prov_oracle.py from the demos'
-// chirp_prov.py run on CPython: stored<TAB>push<TAB>answer<TAB>saved<TAB>kind.
 std::string canonical(const Settings& s) {
   static char buf[4096];
   JsonWriter w(buf, sizeof buf);
@@ -1224,6 +1259,7 @@ void testProvV18(const char* path) {
     ProvResponder::Event e = ProvResponder::kNone;
     std::string text = "CHIRP+ " + fld[1] + "\r\n";
     for (size_t at; (at = text.find("<NUL>")) != std::string::npos;) text.replace(at, 5, 1, '\0');
+    for (size_t at; (at = text.find("<TAB>")) != std::string::npos;) text.replace(at, 5, 1, '\t');
     for (char ch : text) {
       ProvResponder::Event got = r.feed(ch, stored, 0);
       if (got != ProvResponder::kNone) e = got;
