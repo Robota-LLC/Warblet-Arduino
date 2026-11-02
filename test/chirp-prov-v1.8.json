@@ -490,6 +490,21 @@
     "token",
     "key"
    ]
+  },
+  "relay": {
+   "about": "Firmware with no radio that reports through the PC it is plugged into (the bare-metal Nucleo), at Token and Signed, its key over USB. It has an id of its own, so a credential alone is complete. It takes the network and Thread fields, and keeps them unused, because the setup page sends them to a board that announces no radio.",
+   "caps": "{\"v\":1,\"auth\":[1,2],\"keyProvisioning\":[\"usb\"],\"otaKeyRotation\":false,\"otaFirmwareUpdate\":false,\"transports\":[\"http\"]}",
+   "accepts": [
+    "ssid",
+    "pass",
+    "aps",
+    "thread",
+    "hwid",
+    "host",
+    "claim",
+    "token",
+    "key"
+   ]
   }
  },
  "keys": {
@@ -2924,6 +2939,425 @@
    "answer": "CHIRP= err missing-field",
    "stores": false,
    "after": {}
+  },
+  {
+   "name": "Thread: an empty token",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: tls",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":false}",
+   "answer": "CHIRP= err unsupported tls",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: a pass on a board with no Wi-Fi",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"pw\"}",
+   "answer": "CHIRP= err unsupported pass",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: an unknown field",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"colour\":\"red\"}",
+   "answer": "CHIRP= err unsupported colour",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: a setup code starts a new device: the key goes",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"claim\":\"CHIRP-NEWCODE1\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "CHIRP-NEWCODE1",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: a first setup without an id: the id is its own",
+   "profile": "thread",
+   "stored": {},
+   "push": "{\"thread\":{\"dataset\":\"0e080000000000010000\"},\"claim\":\"CHIRP-ABCD2345\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "CHIRP-ABCD2345"
+   }
+  },
+  {
+   "name": "Relay: a first setup with a setup code alone: the id is its own",
+   "profile": "relay",
+   "stored": {},
+   "push": "{\"claim\":\"CHIRP-ABCD2345\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "token": "CHIRP-ABCD2345"
+   }
+  },
+  {
+   "name": "Relay: a first setup with a setup code and an id",
+   "profile": "relay",
+   "stored": {},
+   "push": "{\"claim\":\"CHIRP-ABCD2345\",\"hwid\":\"board-1\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "token": "CHIRP-ABCD2345",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: networks are taken and kept, though it joins none",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a thread object is taken and kept",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"thread\":{\"dataset\":\"0e080000000000010000\"}}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a key",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
+  },
+  {
+   "name": "Relay: a setup code starts a new device: the key goes",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"claim\":\"CHIRP-NEWCODE1\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "token": "CHIRP-NEWCODE1",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a token alone (a rotation) keeps the key",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   },
+   "push": "{\"token\":\"tok-2\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "token": "tok-2",
+    "hwid": "board-1",
+    "key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+   }
+  },
+  {
+   "name": "Relay: an id of 31 characters",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "id-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   }
+  },
+  {
+   "name": "Relay: an id of 129 characters",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an id with a space",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"board 1\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a host of 64 characters",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"host\":\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh.com\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an empty token",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an empty setup code",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a setup code and a token together",
+   "profile": "relay",
+   "stored": {},
+   "push": "{\"claim\":\"CHIRP-ABCD2345\",\"token\":\"t\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {}
+  },
+  {
+   "name": "Relay: a key that is not 32 bytes",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"c2hvcnQ=\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: level",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"level\":1}",
+   "answer": "CHIRP= err unsupported level",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: tls",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"tls\":true}",
+   "answer": "CHIRP= err unsupported tls",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an unknown field",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"colour\":\"red\"}",
+   "answer": "CHIRP= err unsupported colour",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: no credential yet",
+   "profile": "relay",
+   "stored": {},
+   "push": "{\"hwid\":\"board-1\"}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {}
+  },
+  {
+   "name": "Relay: nothing at all on a new board",
+   "profile": "relay",
+   "stored": {},
+   "push": "{}",
+   "answer": "CHIRP= err missing-field",
+   "stores": false,
+   "after": {}
+  },
+  {
+   "name": "Relay: not JSON",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
   },
   {
    "name": "the longest record: eight networks named and keyed in backslashes, a 31-character id, a 63-character token of backslashes, a host and a key",
