@@ -2043,6 +2043,215 @@
    }
   },
   {
+   "name": "a token with a space",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok en\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a setup code with a space",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"claim\":\"CHIRP-AB CD\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a token with an escaped NUL",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"abc\\u0000suffix\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a pass with an escaped NUL",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"p\\u0000w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an escaped NUL in a field name",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\\u0000\":\"home\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a raw NUL in a value",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"p\u0000w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a pass with a backslash and u0000 as text",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"\\\\u0000\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "\\u0000",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a pass with a tab",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"p\\tw\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "p\tw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "an ssid with a tab",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"ho\\tme\",\"pass\":\"pw\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "ho\tme",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a key with a space in it",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2Rl ZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "a key with a line break in it",
+   "profile": "token",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"key\":\"MDEyMzQ1Njc4OWFiY2Rl\\nZjAxMjM0NTY3ODlhYmNkZWY=\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
    "name": "no id yet",
    "profile": "token",
    "stored": {},
@@ -2479,6 +2688,57 @@
    }
   },
   {
+   "name": "Open: a pass with an escaped NUL",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"p\\u0000w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a raw NUL in a value",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"p\u0000w\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Open: a pass with a tab",
+   "profile": "open",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"p\\tw\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "p\tw",
+    "hwid": "board-1"
+   }
+  },
+  {
    "name": "Open: no id yet",
    "profile": "open",
    "stored": {},
@@ -2650,6 +2910,44 @@
    }
   },
   {
+   "name": "TLS switch: a token with a space",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok en\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "TLS switch: a pass with a tab",
+   "profile": "token-tls",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"p\\tw\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "p\tw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
    "name": "Signed only: a first setup with a setup code",
    "profile": "signed",
    "stored": {},
@@ -2755,6 +3053,44 @@
    "after": {
     "ssid": "home",
     "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a token with a space",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok en\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Signed only: a pass with a tab",
+   "profile": "signed",
+   "stored": {
+    "ssid": "home",
+    "pass": "pw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"pass\":\"p\\tw\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "p\tw",
     "token": "tok-0123456789",
     "hwid": "board-1"
    }
@@ -3015,6 +3351,69 @@
    },
    "push": "{\"colour\":\"red\"}",
    "answer": "CHIRP= err unsupported colour",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: a token with a space",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok en\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: a token with an escaped NUL",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"abc\\u0000suffix\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Thread: an empty id on a board with an id of its own",
+   "profile": "thread",
+   "stored": {
+    "thread": {
+     "dataset": "0e080000000000010000"
+    },
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"\"}",
+   "answer": "CHIRP= err missing-field",
    "stores": false,
    "after": {
     "thread": {
@@ -3353,6 +3752,83 @@
    },
    "push": "{\"token\":",
    "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a token with a space",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"tok en\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a token with an escaped NUL",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"token\":\"abc\\u0000suffix\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an escaped NUL in a field name",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\\u0000\":\"home\"}",
+   "answer": "CHIRP= err bad-json",
+   "stores": false,
+   "after": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: a pass with a tab",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"ssid\":\"home\",\"pass\":\"p\\tw\"}",
+   "answer": "CHIRP= ok",
+   "stores": true,
+   "after": {
+    "ssid": "home",
+    "pass": "p\tw",
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   }
+  },
+  {
+   "name": "Relay: an empty id on a board with an id of its own",
+   "profile": "relay",
+   "stored": {
+    "token": "tok-0123456789",
+    "hwid": "board-1"
+   },
+   "push": "{\"hwid\":\"\"}",
+   "answer": "CHIRP= err missing-field",
    "stores": false,
    "after": {
     "token": "tok-0123456789",

@@ -2017,6 +2017,32 @@ int main() {
     Serial.endless = 0;
   }
 
+  // 21. A pass alone, on a board holding a list, through a real save and the
+  // next start: the record it saved reads back at begin(). Until 67f71da the
+  // board answered ok, saved a record whose first entry kept the old pass,
+  // and came up not set up.
+  {
+    std::string kept = sim.stored;
+    sim.stored.clear();
+    Warblet w;
+    w.begin();
+    Serial.type("CHIRP+ {\"aps\":[{\"ssid\":\"cafe\",\"pass\":\"p1\"},{\"ssid\":\"office\",\"pass\":\"p2\"}],"
+                "\"token\":\"T\",\"hwid\":\"sim-list-1\"}\r\n");
+    w.wait(100);
+    Serial.out.clear();
+    Serial.type("CHIRP+ {\"pass\":\"new-pass\"}\r\n");
+    w.wait(100);
+    bool saved = said("CHIRP= ok\r\n") && sim.stored.find("new-pass") != std::string::npos;
+    Serial.out.clear();
+    Warblet again;  // the next start, on what was saved
+    again.begin();
+    check(saved && said("settings loaded from this board") && std::string(again.deviceId()) == "sim-list-1",
+          "a pass alone on a stored list: saved, and loaded again at the next begin()");
+    sim.stored = kept;
+    warblet::board::wifiStop();
+    Serial.out.clear();
+  }
+
   printf("\nsim: %d passed, %d failed\n%s\n", pass, fail, fail ? "FAILED" : "PASSED");
   return fail ? 1 : 0;
 }

@@ -304,6 +304,9 @@ void JsonWriter::string(const char* s) {
     if (c == '"' || c == '\\') {
       put('\\');
       put((char)c);
+    } else if (c && strchr("\b\f\n\r\t", c)) {
+      put('\\');  // the short escapes JSON has, as every JSON writer writes them
+      put("bfnrt"[strchr("\b\f\n\r\t", c) - "\b\f\n\r\t"]);
     } else if (c < 0x20) {
       put('\\'); put('u'); put('0'); put('0');
       put(H[c >> 4]);

@@ -118,7 +118,12 @@ def stricter(push_text):
             continue
         if len(value.encode("utf-8")) > LIMITS[name]:
             return True
-        if any(ord(c) < 0x20 or ord(c) == 0x7F for c in value):
+        # A network's name and password take any character but NUL (CHIRP-PROV
+        # v1.8); every other text refuses control characters.
+        if name in ("ssid", "pass"):
+            if "\x00" in value:
+                return True
+        elif any(ord(c) < 0x20 or ord(c) == 0x7F for c in value):
             return True
     key = push.get("key")
     if isinstance(key, str) and key:
@@ -228,8 +233,9 @@ cases = [
     (empty, '{"ssid":"s","token":"T","hwid":"h","key":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"}'),
     (empty, '{"ssid":"s","token":"T","hwid":"h","host":"evil.example\\r\\nX-Injected: 1"}'),
     (empty, '{"ssid":"s","token":"T\\r\\nX-Injected: 1","hwid":"h"}'),
-    (empty, '{"ssid":"s\\t","token":"T","hwid":"h"}'),
     (empty, '{"ssid":"s","token":"T","hwid":"h","level":NaN}'),
+    # A tab in a network's name, taken by both since CHIRP-PROV v1.8.
+    (empty, '{"ssid":"s\\t","token":"T","hwid":"h"}'),
     # Fields exactly at the limits are accepted by both.
     (empty, '{"ssid":"' + "s" * 32 + '","pass":"' + "p" * 64 + '","token":"' + "t" * 128 + '","hwid":"' + "h" * 128 + '"}'),
 ]

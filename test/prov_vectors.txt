@@ -46,6 +46,6 @@
 {}	{"ssid":"s","token":"T","hwid":"h","key":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"}	CHIRP= ok	["s","","T","h","","AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",null]	stricter
 {}	{"ssid":"s","token":"T","hwid":"h","host":"evil.example\r\nX-Injected: 1"}	CHIRP= ok	["s","","T","h","evil.example\r\nX-Injected: 1","",null]	stricter
 {}	{"ssid":"s","token":"T\r\nX-Injected: 1","hwid":"h"}	CHIRP= ok	["s","","T\r\nX-Injected: 1","h","","",null]	stricter
-{}	{"ssid":"s\t","token":"T","hwid":"h"}	CHIRP= ok	["s\t","","T","h","","",null]	stricter
 {}	{"ssid":"s","token":"T","hwid":"h","level":NaN}	CHIRP= ok	["s","","T","h","","",null]	stricter
+{}	{"ssid":"s\t","token":"T","hwid":"h"}	CHIRP= ok	["s\t","","T","h","","",null]	same
 {}	{"ssid":"ssssssssssssssssssssssssssssssss","pass":"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","token":"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt","hwid":"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"}	CHIRP= ok	["ssssssssssssssssssssssssssssssss","pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp","tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt","hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh","","",null]	v1.8=CHIRP= err bad-json

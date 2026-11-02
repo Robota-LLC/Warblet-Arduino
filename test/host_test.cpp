@@ -899,9 +899,12 @@ void testProv() {
          ProvResult::BadJson, "a line break in host cannot add a request header");
   expect("{\"ssid\":\"s\",\"token\":\"T\\r\\nX-Injected: 1\",\"hwid\":\"h\"}", ProvResult::BadJson,
          "a line break in the token cannot add a request header");
-  expect("{\"ssid\":\"s\\t\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson, "a tab in the Wi-Fi name");
-  expect("{\"ssid\":\"s\",\"pass\":\"p\\u007f\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson,
+  // A network's name and password take any character but NUL (CHIRP-PROV v1.8).
+  expect("{\"ssid\":\"s\\t\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::Ok, "a tab in the Wi-Fi name");
+  expect("{\"ssid\":\"s\",\"pass\":\"p\\u007f\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::Ok,
          "a DEL in the password");
+  expect("{\"ssid\":\"s\",\"pass\":\"p\\u0000w\",\"token\":\"T\",\"hwid\":\"h\"}", ProvResult::BadJson,
+         "a NUL in the password");
   expect("{\"ssid\":\"s\",\"token\":\"T\",\"hwid\":\"h\",\"aps\":[{\"ssid\":\"a\\nb\"}]}", ProvResult::BadJson,
          "a line break in a listed network");
 
@@ -1220,6 +1223,7 @@ void testProvV18(const char* path) {
     ProvResponder r(scratch);
     ProvResponder::Event e = ProvResponder::kNone;
     std::string text = "CHIRP+ " + fld[1] + "\r\n";
+    for (size_t at; (at = text.find("<NUL>")) != std::string::npos;) text.replace(at, 5, 1, '\0');
     for (char ch : text) {
       ProvResponder::Event got = r.feed(ch, stored, 0);
       if (got != ProvResponder::kNone) e = got;
@@ -1350,7 +1354,7 @@ void testProvDemo(const char* path) {
   }
   fclose(f);
   // v1.8's bounds and aps rules moved some cases from "same" to "v1.8".
-  check(same >= 25 && stricter >= 8 && same + stricter + v18 >= 49, "the vectors file holds the expected cases");
+  check(same >= 26 && stricter >= 7 && same + stricter + v18 >= 49, "the vectors file holds the expected cases");
   printf("      %d pushes answered as chirp_prov.py answers them; %d documented stricter cases refused; %d as "
          "CHIRP-PROV v1.8 answers them\n", same, stricter, v18);
 }

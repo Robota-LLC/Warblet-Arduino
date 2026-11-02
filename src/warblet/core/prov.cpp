@@ -19,6 +19,13 @@ bool takeString(const JsonValue& v, char* field, size_t cap) {
   return v.type == JsonValue::kString && jsonString(v, field, cap) >= 0 && !hasControlChar(field);
 }
 
+// A network's name or password: any character but NUL (CHIRP-PROV v1.8), so
+// a tab or another control character, sent escaped, is kept. jsonString()
+// refuses an escaped NUL, and the parser a raw control character.
+bool takeNetworkText(const JsonValue& v, char* field, size_t cap) {
+  return v.type == JsonValue::kString && jsonString(v, field, cap) >= 0;
+}
+
 // The push fields the library acts on (CHIRP-PROV v1.8); any other is refused.
 const char* const kAccepted[] = {"ssid", "pass", "aps", "claim", "token", "hwid", "host", "key"};
 
@@ -44,7 +51,7 @@ bool validHost(const char* host) {
 // same number of characters and bytes on every responder.
 bool printableAscii(const char* text) {
   for (const char* p = text; *p; p++) {
-    if (*p < 0x20 || *p > 0x7E) return false;
+    if (*p < 0x21 || *p > 0x7E) return false;
   }
   return true;
 }
@@ -103,10 +110,10 @@ bool validNetworks(const JsonValue& list, Settings& out) {
     JsonValue k, v;
     while (entry.next(k, v)) {
       if (jsonKeyIs(k, "ssid")) {
-        if (!takeString(v, n.ssid, sizeof n.ssid)) return false;
+        if (!takeNetworkText(v, n.ssid, sizeof n.ssid)) return false;
         hasSsid = true;
       } else if (jsonKeyIs(k, "pass")) {
-        if (!takeString(v, n.pass, sizeof n.pass)) return false;
+        if (!takeNetworkText(v, n.pass, sizeof n.pass)) return false;
         hasPass = true;
       } else {
         return false;
@@ -137,10 +144,12 @@ bool Settings::network(size_t i, const char** ssidOut, const char** passOut) con
     }
     seen = 1;
   }
+  // Each (name, password) pair once: one name with two passwords is two
+  // networks to try (CHIRP-PROV v1.8).
   for (size_t a = 0; a < apsCount; a++) {
-    bool repeat = ssid[0] && strcmp(aps[a].ssid, ssid) == 0;
+    bool repeat = ssid[0] && strcmp(aps[a].ssid, ssid) == 0 && strcmp(aps[a].pass, pass) == 0;
     for (size_t b = 0; b < a && !repeat; b++) {
-      if (strcmp(aps[b].ssid, aps[a].ssid) == 0) repeat = true;
+      if (strcmp(aps[b].ssid, aps[a].ssid) == 0 && strcmp(aps[b].pass, aps[a].pass) == 0) repeat = true;
     }
     if (repeat) continue;
     if (seen == i) {
@@ -205,10 +214,10 @@ ProvResult applyPush(const char* json, size_t len, const Settings& stored, Setti
     bool good = true;
     if (jsonKeyIs(k, "ssid")) {
       // 1 to 32 bytes: 802.11's limit, and an empty one names no network.
-      good = takeString(v, merged.ssid, sizeof merged.ssid) && merged.ssid[0] != '\0';
+      good = takeNetworkText(v, merged.ssid, sizeof merged.ssid) && merged.ssid[0] != '\0';
       pushedSsid = true;
     } else if (jsonKeyIs(k, "pass")) {
-      good = takeString(v, merged.pass, sizeof merged.pass);
+      good = takeNetworkText(v, merged.pass, sizeof merged.pass);
       pushedPass = true;
     } else if (jsonKeyIs(k, "aps")) {
       good = validNetworks(v, merged);
