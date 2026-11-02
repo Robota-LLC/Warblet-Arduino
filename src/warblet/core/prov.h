@@ -17,7 +17,7 @@ static const size_t kMaxNetworks = 8;  // CHIRP-PROV v1.1: at most 8 networks
 // at the top as well, a 128-character id, a 63-character token of
 // backslashes, a host and a key. 4096 is the limit every family uses.
 static const size_t kProvLineMax = 4096;
-// The longest record it can leave is 2,325 bytes of JSON: the same with
+// The longest record it can leave is 2,334 bytes of JSON: the same with
 // names and passwords of backslashes, which are stored as two bytes each.
 static const size_t kSettingsTextMax = 3072;
 static const size_t kProvReplyMax = 512;  // CHIRP-PROV v1.8: the longest line a board prints
