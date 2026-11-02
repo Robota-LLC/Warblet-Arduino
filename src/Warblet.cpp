@@ -325,8 +325,13 @@ bool Warblet::serviceSetup() {
   if (Serial.available() > 0) refreshCaps();
   // At most kProvLineMax bytes a pass: more than a serial buffer holds, so
   // what waited is read, and input that never pauses cannot hold loop(). A
-  // line still coming goes on at the next pass.
-  for (size_t n = 0; n < kProvLineMax && Serial.available() > 0; n++) {
+  // line still coming goes on at the next pass. Finding nothing waiting is a
+  // look at a quiet line, which is how a line that stopped is seen.
+  for (size_t n = 0; n < kProvLineMax; n++) {
+    if (Serial.available() <= 0) {
+      setup_.quiet(millis());
+      break;
+    }
     int c = Serial.read();
     if (c < 0) break;
     ProvResponder::Event e = setup_.feed((char)c, settings_, millis());

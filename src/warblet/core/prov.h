@@ -131,6 +131,13 @@ class ProvResponder {
   };
   explicit ProvResponder(Settings& scratch);
   Event feed(char c, const Settings& current, unsigned long nowMs);
+  // A look at the serial line that found nothing, at nowMs. A setup line is
+  // given up wherever it is, over the limit or not, once the line has been
+  // seen quiet for kProvLineIdleMs: looks that found nothing, that far apart
+  // (CHIRP-PROV v1.8). Bytes that came while the sketch was busy would still
+  // be waiting, so quiet seen at both ends means none came between; a byte
+  // found waiting joins the line that was arriving, so a good push is kept.
+  void quiet(unsigned long nowMs);
   const char* reply() const { return reply_; }
   const Settings& pending() const { return pending_; }
   // The demo slug the announce carries; "" (the default) for none.
@@ -142,8 +149,8 @@ class ProvResponder {
   void setCaps(const char* caps);
   const char* stored(bool ok) const { return provResultLine(ok ? ProvResult::Ok : ProvResult::StoreFailed); }
   // True while a setup line (one that starts CHIRP) is arriving: begun, not
-  // over the limit, its last byte under kProvLineIdleMs ago and its first
-  // under kProvLineLateMs ago.
+  // over the limit, not seen quiet for kProvLineIdleMs (quiet() gives such a
+  // line up), and its first byte under kProvLineLateMs ago.
   bool lineArriving(unsigned long nowMs) const;
 
  private:
@@ -152,8 +159,9 @@ class ProvResponder {
   char buf_[kProvLineMax + 1];
   size_t len_ = 0;
   bool overflow_ = false;
-  unsigned long lastMs_ = 0;   // when the line's last byte came
-  unsigned long firstMs_ = 0;  // when its first byte came
+  bool quiet_ = false;          // the last look found nothing
+  unsigned long quietMs_ = 0;   // since when every look has found nothing
+  unsigned long firstMs_ = 0;   // when the line's first byte came
   // The longest reply is the announce, at most 512 bytes (CHIRP-PROV v1.8):
   // a 128-byte id, a 64-byte version, a 40-byte slug and the capability
   // object take about 450.

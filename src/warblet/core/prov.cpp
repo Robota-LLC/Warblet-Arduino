@@ -387,15 +387,20 @@ void ProvResponder::setCaps(const char* caps) {
   if (caps != nullptr && strlen(caps) <= kProvCapsMax) strcpy(caps_, caps);
 }
 
-ProvResponder::Event ProvResponder::feed(char c, const Settings& current, unsigned long nowMs) {
-  // A line whose bytes stopped for kProvLineIdleMs will not end now: what
-  // came before the pause is dropped, over the limit or not (CHIRP-PROV
-  // v1.8), and this byte starts afresh, so a probe after it is answered.
-  if ((len_ > 0 || overflow_) && nowMs - lastMs_ >= kProvLineIdleMs) {
+void ProvResponder::quiet(unsigned long nowMs) {
+  if (!quiet_) {
+    quiet_ = true;
+    quietMs_ = nowMs;
+  } else if ((len_ > 0 || overflow_) && nowMs - quietMs_ >= kProvLineIdleMs) {
+    // The line stopped coming: it will not end now, over the limit or not,
+    // and the next byte starts afresh, so a probe after it is answered.
     len_ = 0;
     overflow_ = false;
   }
-  lastMs_ = nowMs;
+}
+
+ProvResponder::Event ProvResponder::feed(char c, const Settings& current, unsigned long nowMs) {
+  quiet_ = false;  // a byte: the line was not quiet
   if (c == '\r' || c == '\n') {  // the portal sends CRLF; a bare LF is fine too
     // A line over the limit is thrown away whole, through its line ending:
     // no answer, and no part of it is read as a command (CHIRP-PROV v1.8).
@@ -418,7 +423,7 @@ ProvResponder::Event ProvResponder::feed(char c, const Settings& current, unsign
 }
 
 bool ProvResponder::lineArriving(unsigned long nowMs) const {
-  if (len_ == 0 || overflow_ || nowMs - lastMs_ >= kProvLineIdleMs || nowMs - firstMs_ >= kProvLineLateMs)
+  if (len_ == 0 || overflow_ || nowMs - firstMs_ >= kProvLineLateMs)
     return false;
   const char* p = buf_;
   const char* end = buf_ + len_;

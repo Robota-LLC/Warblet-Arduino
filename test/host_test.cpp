@@ -1154,25 +1154,49 @@ void testProv() {
     }
     check(e == ProvResponder::kStore && strcmp(r.pending().hwId, "board-paced") == 0,
           "a push in pieces a second apart lands");
+    // A pause is one the reader saw: serviceSetup() reports each look that
+    // found nothing waiting (quiet()), and a line is given up once two such
+    // looks are 1.5 s apart.
+    auto pause = [&](unsigned long ms) {
+      r.quiet(nowMs);
+      nowMs += ms;
+      r.quiet(nowMs);
+    };
     feedLine("CHIRP+ {\"ssid\":\"s\",");
-    nowMs += 1500;
+    pause(1400);
+    check(feedLine("\"token\":\"T\",\"hwid\":\"board-pause\"}\r\n") == ProvResponder::kStore &&
+              strcmp(r.pending().hwId, "board-pause") == 0,
+          "a line seen quiet for 1.4 s lands");
+    feedLine("CHIRP+ {\"ssid\":\"s\",");
+    pause(1500);
     check(feedLine("\"token\":\"T\",\"hwid\":\"board-late\"}\r\n") == ProvResponder::kNone,
-          "a line that stopped for 1.5 s is given up, and what follows is not joined to it");
+          "a line seen quiet for 1.5 s is given up, and what follows is not joined to it");
     feedLine("CHIRP+ {\"ssid\":");
-    nowMs += 2000;
+    pause(2000);
     check(feedLine("CHIRP?\r\n") == ProvResponder::kReply && strncmp(r.reply(), "CHIRP! ", 7) == 0,
           "a probe after a stalled line is answered with the announce");
     // A pause gives up a line over the limit too (CHIRP-PROV v1.8): the first
     // probe after it is answered. Without a pause, the rest of such a line is
     // still thrown away through its line ending.
     feedLine("CHIRP+ " + std::string(kProvLineMax, 'j'));
-    nowMs += 2000;
+    pause(2000);
     check(feedLine("CHIRP?\r\n") == ProvResponder::kReply && strncmp(r.reply(), "CHIRP! ", 7) == 0,
           "the first probe after a line over the limit stopped for 2 s is answered");
     feedLine("CHIRP+ " + std::string(kProvLineMax, 'j'));
     nowMs += 1000;
     check(feedLine("jjjCHIRP?\r\n") == ProvResponder::kNone && feedLine("CHIRP?\r\n") == ProvResponder::kReply,
           "without a pause, the rest of a line over the limit is thrown away through its line ending");
+    // The sketch busy for 2 s (loop() not reading): no look found the line
+    // quiet, so what was waiting joins the line that was arriving.
+    feedLine("CHIRP+ {\"ssid\":\"s\",");
+    nowMs += 2000;
+    check(feedLine("\"token\":\"T\",\"hwid\":\"board-busy\"}\r\n") == ProvResponder::kStore &&
+              strcmp(r.pending().hwId, "board-busy") == 0,
+          "a push whose rest waited while the sketch was busy 2 s lands");
+    feedLine("CHIRP+ " + std::string(kProvLineMax, 'j'));
+    nowMs += 2000;
+    check(feedLine("CHIRP?\r\n") == ProvResponder::kNone && feedLine("CHIRP?\r\n") == ProvResponder::kReply,
+          "an over-limit line's tail read after the sketch was busy 2 s is still dropped; the next probe is answered");
   }
   r.setSlug("demo-cyd-desk-display-arduino");
   check(feedLine("CHIRP?\r\n") == ProvResponder::kReply &&
