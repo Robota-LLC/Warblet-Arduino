@@ -90,6 +90,8 @@ If its device was deleted, or its setup code was never used, Warblet answers the
 
 It stays stopped after a restart. To start it again, set it up over USB at warbletiot.com/flash; changing only the Wi-Fi does not count. A board whose settings are typed into `board.begin()` starts again with new settings typed in and uploaded. The board keeps a short fingerprint of the refused setup, never the code itself.
 
+To name your own firmware in USB setup, call `board.firmware("my-project-1.0")` before `begin()`. The library supplies its own version if you omit this. See the [reference](docs/REFERENCE.md) for setup field and transfer limits.
+
 ## The library uses `Serial`
 
 `board.begin()` starts `Serial` at 115200 baud, with a 2 KB receive buffer on ESP32 boards, so call it before any `Serial.begin()`. The library reads every byte that arrives on `Serial`: it answers the setup page's lines, which start with `CHIRP?` and `CHIRP+`, and discards everything else. A sketch that reads `Serial` itself will not see that input.
@@ -98,7 +100,7 @@ It stays stopped after a restart. To start it again, set it up over USB at warbl
 
 Every connection is TLS: HTTPS, or MQTT on port 8883. The board checks that the server's certificate chains to one of four pinned Let's Encrypt roots and names the host. The device token says which device is talking.
 
-With a signing key, each message also carries an HMAC-SHA256 signature over its tag and its bytes, and over HTTPS a timestamp nonce too. Warblet refuses a message that was altered, and over HTTPS a copy sent again. Signing is not encryption; TLS is what keeps the bytes unreadable on the way. Over HTTPS, a sketch with a command function can also receive its signing key from Warblet over the air, because it asks Warblet for commands. Every other board gets its key only over USB, from the setup page: a sketch with no command function never asks, and over MQTT a key never comes over the air.
+With a signing key, each message also carries an HMAC-SHA256 signature over its tag and its bytes, and over HTTPS a timestamp nonce too. Warblet refuses a message that was altered, and over HTTPS a copy sent again. Signing is not encryption; TLS is what keeps the bytes unreadable on the way. Over HTTPS, a sketch with a command function can receive its first signing key from Warblet over the air, but only while it has no key. A later key is dropped with a console message; it does not replace the stored key. Every other board gets its key only over USB, from the setup page: a sketch with no command function never asks, and over MQTT a key never comes over the air.
 
 The settings, including Wi-Fi passwords, the token and the key, are stored unencrypted in the board's flash, and the board accepts new settings from anyone at its USB port. Physical access to a board is full access to it.
 

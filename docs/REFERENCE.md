@@ -10,7 +10,7 @@ Every call the library offers, what each one does, what goes on the wire, and th
 | `Warblet board(Warblet::MQTT);` | The same over MQTT: one session stays open, so commands arrive as soon as they are sent. ESP32 boards on the Arduino core for ESP32 3.x. Only a sketch that uses this form carries the MQTT code. |
 | `board.begin()` | Starts `Serial` and loads the settings the setup page stored on the board. Returns at once; joining Wi-Fi happens in `loop()`. |
 | `board.begin(wifi, password, deviceId, token, key)` | Starts with settings typed into the sketch instead. `key` (the 44-character signing key from the device page) is optional. The setup page is then not answered. |
-| `board.loop()` | Does the board's work once without waiting: answers the setup page, keeps Wi-Fi up, and over HTTPS asks for commands every 10 s once a command function is set; over MQTT it hands over the commands that arrived. Call it every time `loop()` runs if you keep your own timing with `millis()`. |
+| `board.loop()` | Answers the setup page and keeps Wi-Fi up. Over HTTPS, with a command function set, it asks for commands every 10 s and waits for the TLS request to finish; over MQTT it hands over received commands. It does not sleep. Call it every time `loop()` runs if you keep your own timing with `millis()`. |
 | `board.wait(ms)` | Does that work for `ms` milliseconds: use it wherever you would use `delay()`. A request running when the time is up finishes first, so it can take longer. Inside a command function it only answers the setup page. |
 | `board.sendNumber(value, tag)` | Sends a number as text: `"21.53"`, `"101325"`, `"-5.0"`. Any integer type, `float` (7 significant digits) or `double` (15). NaN and infinity are refused. Its decoder is one line: `{"value": float(str(payload))}`. |
 | `board.sendTenths(value, tag)` | Sends the public temperature demos' two-byte format: the value times ten, rounded, as a signed 16-bit number, high byte first (`00 c9` is 20.1). From -3276.8 to 3276.7; a value outside is refused and said. |
@@ -24,6 +24,7 @@ Every call the library offers, what each one does, what goes on the wire, and th
 | `board.onState(function)` | Runs `function(Warblet::State state)` each time `state()` or `answer()` changes, and once at `begin()`. It runs inside the library's work, even while Wi-Fi joins, so it should only show the state. |
 | `board.deviceId()` | The device id the setup page gave the board, or `""` before it has one. |
 | `board.demo(slug)` | For a demo's sketch: names the demo (`"demo-cyd-desk-display-arduino"`), so the board tells the setup page which demo it runs. Call it before `begin()`. **Only a published demo's own sketch calls this.** Delete the line in a sketch you change, or the setup page sets your board up as that demo, with its spec, decoder and dashboard. |
+| `board.firmware(version)` | Names your firmware build in USB setup, before `begin()`: 1–64 letters, digits, `.`, `_` or `-`. Without it, the board reports the library version. Change it when your firmware changes. |
 | `board.restartWhenStuck(ms)` | A last resort for a board on its own: when a request gets no answer at all while Wi-Fi says it is connected, and nothing has answered for `ms`, the board restarts. Any answer counts, a refusal too, and so does the start; never with no settings, or once stopped. Under 5 minutes means 5 minutes, and is said; `0` turns it off, which is how a board starts. A board on Wi-Fi that cannot set its clock (NTP blocked) sends nothing, so it is `NO_ANSWER` too and counts the same. A restart loses what the sketch had in memory. |
 
 `tag` is optional on every send. It is 1 to 32 letters, digits, `_`, `.` or `-`, such as `button` or `heartbeat`; routines can match on it.
@@ -48,13 +49,15 @@ The setup page sends settings over USB, and the board stores them in its flash (
 
 | Setting | Limit |
 |---|---|
-| Wi-Fi networks | up to 8, each a name of up to 32 bytes and a password of up to 64 characters |
+| Wi-Fi networks | up to 8, each a name of up to 32 bytes and a password of up to 64 bytes |
 | device id | 1 to 128 letters, digits, `:`, `-`, `_` or `.` |
-| credential | a setup code (`CHIRP-` and 8 characters) or a device token, up to 128 characters |
+| credential | a setup code or device token, 1–63 printable ASCII characters, without spaces |
 | signing key | 44 base64 characters that decode to 32 bytes, or none |
-| host | up to 128 characters, or none for Warblet's own |
+| host | up to 63 letters, digits, `.` or `-`, or none for Warblet's own |
 
-The board tries its networks in order, 12 s each, and tries the list again every 15 s until one joins. After it answers the setup page's probe (`CHIRP?`) it listens only on USB for 10 s, so the settings that follow are read as they arrive. A setup line can be up to 4,096 characters; a longer one is thrown away whole, through its line ending, with no answer, and a line whose bytes stop for 1.5 s is given up. Settings that change the device id or the token are a new start: the board answers `CHIRP= ok`, then restarts, so the sketch starts afresh under the new setup (a hello again, nothing the old setup showed). Any other settings - Wi-Fi networks, a key, a host - take effect as soon as they are stored, without a restart.
+Network names and passwords cannot contain control characters (below U+0020 or U+007F). The same network can appear with different passwords. A push containing only `pass` changes the first stored network. A NUL anywhere in a push is refused.
+
+The board tries its networks in order, 12 s each, and tries the list again every 15 s until one joins. After it answers the setup page's probe (`CHIRP?`) it listens only on USB for 10 s, so the settings that follow are read as they arrive. A setup line can be up to 4,096 bytes; a longer one is thrown away whole, through its line ending, with no answer. The board gives up a line when it observes no new bytes for 1.5 s. Time spent busy with other work is not an observed pause: bytes already waiting are added to the current line. Finish a line within 70 seconds of its first byte. Hosts send at most 64 bytes per piece, at least 30 ms apart. Stored settings have a 3 KiB record buffer. Settings that change the device id or the token are a new start: the board answers `CHIRP= ok`, then restarts, so the sketch starts afresh under the new setup (a hello again, nothing the old setup showed). Any other settings - Wi-Fi networks, a key, a host - take effect as soon as they are stored, without a restart.
 
 The setup code is the board's credential until its first message is stored: that message adds the board to your account, and from then on the same code is its token. A new token, or a signing key, can be pushed over USB at any time.
 
@@ -82,7 +85,7 @@ A command check is `POST /ingest/{deviceId}/down` with an empty body. With a sig
 | `202` | stored: `true` |
 | `202 {"status":"unclaimed"}` | Warblet does not know the board: it stops (below) |
 | `204` | no command waiting |
-| `200` with a body | a command, handed to the command function; or, when the body starts `CHIRPKEY1 `, a new signing key, which is stored and used from then on. Only a sketch with a command function asks, so only it can get a key over the air; every other board, and every board over MQTT, gets its key only over USB, from the setup page |
+| `200` with a body | a command, handed to the command function; or, when the body starts `CHIRPKEY1 `, a first signing key, stored only if the board has none. A key received when one is already stored is dropped, with a console message; it never replaces the stored key. Only a sketch with a command function asks, so only it can get a key over the air; every other board, and every board over MQTT, gets its key only over USB, from the setup page |
 | `401`, `403`, `404`, `429`, `5xx` | not stored; it waits (above). A `429` that carries `X-Chirp-Budget` is the day's storage budget; one without it is the rate. |
 
 A reply cut short, or with neither a length nor chunking, is treated as no answer.
